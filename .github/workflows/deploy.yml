@@ -1,1 +1,48 @@
+name: Deploy to GitHub Pages
 
+on:
+  push:
+    branches:
+      - main   # main ブランチに push されるたびに自動デプロイ
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      # 1. リポジトリをチェックアウト
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. index.html の __YOUTUBE_API_KEY__ を実際のキーに置換
+      #    （Secrets に YOUTUBE_API_KEY を登録しておくこと）
+      - name: Inject YouTube API Key
+        run: |
+          sed -i "s|__YOUTUBE_API_KEY__|${{ secrets.YOUTUBE_API_KEY }}|g" index.html
+
+      # 3. GitHub Pages の設定
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      # 4. index.html と全アセット（画像・音声）をアップロード
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'   # リポジトリのルート全体をデプロイ
+
+      # 5. GitHub Pages にデプロイ
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
