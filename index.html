@@ -3,11 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!--
-        ⚠️ このファイルを直接編集してAPIキーを書かないこと！
-        GitHub Actions が自動で __YOUTUBE_API_KEY__ を実際のキーに置き換えます。
-        ローカルで動かしたい場合は index.local.html を使ってください（.gitignore に登録済み）。
-    -->
+
     <title>†霜戌REVERSE†</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
@@ -476,7 +472,7 @@
         </div>
     </div>
 
-    <!-- BGM確認モーダル -->
+    <!-- BGM確認ポップアップ -->
     <div class="modal" id="bgm-confirm-modal" style="z-index:3000;" role="dialog" aria-modal="true" aria-labelledby="bgm-confirm-title">
         <div class="modal-content">
             <div class="snowflake" aria-hidden="true">❄️</div>
@@ -487,7 +483,7 @@
         </div>
     </div>
 
-    <!-- 終了確認モーダル -->
+    <!-- 終了確認ポップアップ -->
     <div class="modal" id="end-modal" style="z-index:2000;" role="dialog" aria-modal="true" aria-labelledby="end-modal-desc">
         <div class="modal-content">
             <div class="snowflake" aria-hidden="true">❄️</div>
@@ -521,8 +517,6 @@ const POSITION_WEIGHT = [
 ];
 
 // ===== YouTube API キー =====
-// GitHub Actions が __YOUTUBE_API_KEY__ をデプロイ時に自動置換します。
-// ローカル確認は index.local.html を使ってください（.gitignore 登録済み）。
 const YOUTUBE_API_KEY = '__YOUTUBE_API_KEY__';
 const CHANNEL_ID      = 'UCQsuThhsBtHln3nCOcX-pfg';
 
