@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!--
+        ⚠️ このファイルを直接編集してAPIキーを書かないこと！
+        GitHub Actions が自動で __YOUTUBE_API_KEY__ を実際のキーに置き換えます。
+        ローカルで動かしたい場合は index.local.html を使ってください（.gitignore に登録済み）。
+    -->
+    <title>†霜戌REVERSE†</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+
+        :root {
+            --board-bg:  #0f4a0f;
+            --body-bg:   #0a3d0a;
+            --accent:    #00bfff;
+            --gold:      #ffd700;
+            --danger:    #ff4444;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background: var(--body-bg);
+            color: #fff;
+            height: 100vh; width: 100vw;
+            overflow: hidden;
+            touch-action: manipulation;
+            position: relative;
+        }
+
+        /* 横画面警告（スマホのみ） */
+        @media screen and (orientation: landscape) and (max-width: 768px) {
+            body::before {
+                content: "縦画面でプレイしてください！";
+                position: fixed; top: 0; left: 0;
+                width: 100%; height: 100%;
+                background: rgba(10,61,10,0.95);
+                z-index: 999999;
+                display: flex; align-items: center; justify-content: center;
+                font-size: clamp(1.4rem, 5vw, 2rem);
+                font-weight: 700; color: var(--gold);
+                text-align: center; padding: 20px;
+            }
+        }
+
+        #app-wrapper { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+
+        /* 雪背景 */
+        .snow-background {
+            position: absolute; inset: 0;
+            background: linear-gradient(135deg, #e0f7ff, #b0e0ff);
+            z-index: 1; overflow: hidden; pointer-events: none;
+        }
+        .snowflake-bg {
+            position: absolute; color: #e0f7ff; font-size: 18px;
+            text-shadow: 0 0 8px #fff;
+            animation: fall linear infinite;
+            opacity: 0.85;
+            will-change: transform;
+        }
+        @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+
+        /* 画面共通 */
+        .screen {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            width: 100%; height: 100%; z-index: 3;
+        }
+
+        /* ===== ボードコンテナ ===== */
+        #board-container {
+            position: relative;
+            margin: 25px auto 70px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.7);
+            border: 18px solid #3a2a1f;
+            border-radius: 18px;
+            background: #3a2a1f;
+            width: min(72vmin, 1100px);
+            height: min(72vmin, 1100px);
+            max-width: 1100px; max-height: 1100px;
+            aspect-ratio: 1 / 1;
+            padding: 18px;
+            box-sizing: content-box;
+            overflow: hidden;
+        }
+
+        /* ===== PC版レイアウト ===== */
+        @media (min-width: 769px) {
+            .game-content {
+                flex-direction: row !important;
+                padding: 0; gap: 0;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .player-info   { order: 1; flex: 1; display: flex; justify-content: center; align-items: center; }
+            #board-container { order: 2; flex: 0 0 auto; }
+            .opponent-info { order: 3; flex: 1; display: flex; justify-content: center; align-items: center; }
+            .char-img { width: min(32vmin, 420px) !important; height: min(32vmin, 420px) !important; aspect-ratio: 1/1 !important; }
+            #title-screen { justify-content: flex-start !important; align-items: center !important; overflow-y: auto !important; padding: 10px 0 !important; }
+            #title-fixed-area, #title-scroll-area { display: flex !important; flex-direction: column !important; align-items: center !important; width: 100% !important; }
+            .main-title { font-size: clamp(2.8rem, 5vw, 6rem) !important; }
+            .strength-btn {
+                width: clamp(120px, 16vw, 165px) !important;
+                height: clamp(120px, 16vw, 165px) !important;
+                font-size: clamp(0.95rem, 1.5vw, 1.2rem) !important;
+                padding: 6px !important;
+            }
+            .strength-btn img { width: clamp(80px, 11vw, 120px) !important; height: clamp(80px, 11vw, 120px) !important; }
+            .start-btn { margin: 8px 0 18px !important; }
+            .strength-select { margin: 10px 0 !important; }
+            #winner-char-img { width: min(50vmin, 560px) !important; height: min(50vmin, 560px) !important; aspect-ratio: 1/1 !important; border-radius: 50% !important; }
+            #se-toggle-btn, #bgm-toggle-option-btn { display: none !important; }
+        }
+
+        /* ===== スマホ版 ===== */
+        @media (max-width: 768px) {
+            #title-screen {
+                justify-content: flex-start !important;
+                align-items: stretch !important;
+                overflow-y: auto !important; overflow-x: hidden !important;
+                -webkit-overflow-scrolling: touch !important;
+                padding: 0 !important;
+            }
+            #title-fixed-area {
+                display: flex !important; flex-direction: column !important;
+                align-items: center !important; width: 100% !important;
+                padding: 52px 12px 8px !important; flex-shrink: 0 !important;
+            }
+            #title-scroll-area { width: 100% !important; padding: 4px 12px 24px !important; flex-shrink: 0 !important; }
+            .main-title { font-size: clamp(2.2rem, 9vw, 3.5rem) !important; letter-spacing: 4px !important; }
+            .subtitle   { font-size: clamp(0.85rem, 3.2vw, 1.1rem) !important; }
+            .title-label { text-align: center !important; width: 100% !important; }
+            .strength-select { gap: 10px !important; margin: 6px 0 !important; }
+            .strength-btn {
+                width: clamp(92px, 29vw, 118px) !important;
+                height: clamp(92px, 29vw, 118px) !important;
+                border-width: 4px !important;
+                font-size: 0.8rem !important;
+                border-radius: 16px !important;
+                padding: 5px !important;
+                overflow: hidden !important;
+                word-break: keep-all !important;
+            }
+            .strength-btn img { width: clamp(56px, 18vw, 74px) !important; height: clamp(56px, 18vw, 74px) !important; margin-bottom: 3px !important; flex-shrink: 0 !important; }
+            .start-btn  { font-size: clamp(1.2rem, 4.5vw, 1.6rem) !important; padding: 12px 40px !important; margin: 8px 0 !important; }
+            .link-area  { gap: 10px !important; margin-bottom: 8px !important; }
+            .link-area a { padding: 8px 18px !important; font-size: 0.85rem !important; }
+            .youtube-container { flex-direction: column !important; gap: 14px !important; width: 100% !important; }
+            .youtube-column    { min-width: unset !important; width: 100% !important; }
+            .youtube-embed iframe { height: clamp(140px, 52vw, 200px) !important; }
+            #bgm-toggle-btn { width: 44px !important; height: 44px !important; font-size: 1.4rem !important; top: 16px !important; right: 14px !important; }
+            #title-option-btn { display: none !important; }
+            #game-screen  { flex-direction: column !important; justify-content: flex-start !important; align-items: center !important; overflow: hidden !important; }
+            .game-content { flex-direction: column !important; padding: 0 !important; gap: 0 !important; width: 100% !important; height: 100% !important; align-items: center !important; justify-content: flex-start !important; position: relative !important; }
+            #player-info-pc, #opponent-info-pc { display: none !important; }
+            .smartphone-top-bar {
+                position: absolute !important; top: 10px !important; left: 0 !important; right: 0 !important;
+                display: flex !important; justify-content: space-around !important; align-items: center !important;
+                padding: 0 88px 0 90px !important; z-index: 30 !important; pointer-events: none !important;
+            }
+            .smartphone-top-bar .side-info  { text-align: center !important; display: flex !important; flex-direction: column !important; align-items: center !important; pointer-events: auto !important; }
+            .smartphone-top-bar .char-img {
+                width: 80px !important; height: 80px !important;
+                min-width: 80px !important; min-height: 80px !important;
+                aspect-ratio: 1/1 !important; margin-bottom: 4px !important;
+                border-radius: 50% !important; background: #fff !important;
+                overflow: hidden !important; box-shadow: 0 4px 14px rgba(0,0,0,0.55) !important;
+                display: flex !important; align-items: center !important; justify-content: center !important;
+            }
+            .smartphone-top-bar .char-img img { width: 100% !important; height: 100% !important; object-fit: contain !important; }
+            .smartphone-top-bar .side-label {
+                font-size: 0.72rem !important; font-weight: 700 !important; color: #fff !important;
+                text-shadow: 0 1px 4px rgba(0,0,0,0.9) !important; white-space: nowrap !important;
+            }
+            #board-container {
+                width: 82vmin !important; height: 82vmin !important;
+                margin: 130px auto 0 !important;
+                border-width: 12px !important; padding: 10px !important;
+                flex-shrink: 0 !important; box-sizing: content-box !important;
+            }
+            .status-bar { position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important; font-size: clamp(1.0rem, 3.2vw, 1.3rem) !important; padding: 10px !important; z-index: 20 !important; }
+            #option-btn { width: 44px !important; height: 44px !important; font-size: 1.4rem !important; top: 16px !important; left: 14px !important; }
+            #result-screen { justify-content: center !important; align-items: center !important; padding: 12px 16px !important; overflow: hidden !important; }
+            .result-title  { font-size: clamp(3rem, 14vw, 5rem) !important; margin-bottom: 8px !important; }
+            #winner-char-img { width: min(58vmin, 280px) !important; height: min(58vmin, 280px) !important; min-width: unset !important; min-height: unset !important; aspect-ratio: 1/1 !important; border-radius: 50% !important; margin: 8px auto !important; flex-shrink: 0 !important; }
+            #result-score-area { font-size: 1.3rem !important; margin: 8px 0 !important; gap: 30px !important; }
+            #result-title-btn, #result-end-btn { padding: 14px 36px !important; font-size: clamp(1.1rem, 4vw, 1.4rem) !important; margin: 6px 8px !important; }
+            #result-snow { font-size: 36px !important; top: -18px !important; left: -16px !important; }
+            .slider-label, #voice-volume-slider, #bgm-volume-slider { display: none !important; }
+        }
+
+        /* ===== 共通スタイル ===== */
+        canvas {
+            display: block;
+            background: var(--board-bg);
+            width: 100%; height: 100%;
+            image-rendering: crisp-edges;
+        }
+        .game-header {
+            width: 100%; padding: 18px;
+            display: flex; justify-content: space-between; align-items: center;
+            background: transparent; position: relative; z-index: 10;
+        }
+        .option-btn {
+            width: 68px; height: 68px;
+            background: var(--gold); color: var(--body-bg);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.2rem;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            cursor: pointer; border: none;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        .option-btn:hover { opacity: 0.85; }
+        .status-bar {
+            width: 100%; text-align: center;
+            padding: 18px;
+            font-size: clamp(1.25rem, 3.2vw, 1.65rem);
+            background: rgba(0,0,0,0.55);
+            font-weight: 700;
+            position: absolute; bottom: 0; left: 0;
+        }
+        .game-content {
+            display: flex; width: 100%; height: 100%;
+            justify-content: space-between; align-items: center;
+            padding: 0 40px; position: relative;
+        }
+        .side-info {
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            text-align: center;
+            font-size: clamp(1.25rem, 2.8vw, 1.6rem);
+            font-weight: 700; z-index: 20;
+        }
+        .char-img {
+            width: min(38vmin, 580px); height: min(38vmin, 580px);
+            border-radius: 50%; background: #fff;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 14px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+        .char-img img { width: 100%; height: 100%; object-fit: contain; }
+
+        /* タイトル */
+        .main-title {
+            font-family: 'Fredoka One', cursive;
+            font-size: clamp(3.8rem, 7vw, 7.8rem);
+            font-weight: 900; letter-spacing: 10px;
+        }
+        .main-title span.symbol { color: #ff69b4; }
+        .main-title span.text   { color: var(--accent); }
+        .subtitle {
+            font-size: clamp(1.5rem, 3.5vw, 2.3rem);
+            font-weight: 700; color: transparent;
+            user-select: text; -webkit-user-select: text;
+            cursor: default; transition: color 0.3s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .subtitle::selection      { background: rgba(255,255,255,0.15); color: #fff; }
+        .subtitle::-moz-selection { background: rgba(255,255,255,0.15); color: #fff; }
+        .subtitle:hover            { color: rgba(255,255,255,0.85); }
+
+        .strength-select { display: flex; gap: clamp(18px, 4vw, 30px); margin: 20px 0 18px; flex-wrap: wrap; justify-content: center; }
+        .strength-btn {
+            width: clamp(130px, 22vw, 170px); height: clamp(130px, 22vw, 170px);
+            border-radius: 25px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.95);
+            border: 7px solid var(--accent);
+            cursor: pointer; transition: all 0.3s;
+            font-size: clamp(1.1rem, 2.8vw, 1.4rem);
+            color: var(--body-bg); overflow: hidden; padding: 6px;
+        }
+        .strength-btn.selected { background: var(--accent); color: #fff; transform: scale(1.1); }
+        .strength-btn img { width: clamp(95px, 16vw, 125px); height: clamp(95px, 16vw, 125px); margin-bottom: 8px; flex-shrink: 0; }
+        .strength-btn.yuetsu         { border-color: #ff4500; background: rgba(255,69,0,0.08); }
+        .strength-btn.yuetsu.selected { background: #ff4500; color: #fff; }
+        #yuetsu-btn-wrap { display: none; width: 100%; justify-content: center; margin-top: 4px; }
+
+        .start-btn {
+            background: var(--accent); color: #fff;
+            font-size: clamp(1.8rem, 5vw, 2.4rem); font-weight: 700;
+            padding: clamp(16px, 4vw, 20px) clamp(55px, 10vw, 75px);
+            border-radius: 50px; border: none;
+            box-shadow: 0 12px 35px rgba(0,191,255,0.5);
+            cursor: pointer; margin: 15px 0 30px; display: block;
+        }
+        #title-screen { background: transparent; overflow: hidden; }
+        .link-area { display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; margin-bottom: 18px; }
+        .link-area a { text-decoration: none; padding: 11px 32px; border-radius: 50px; font-size: clamp(0.98rem, 2.4vw, 1.15rem); font-weight: 700; box-shadow: 0 6px 14px rgba(0,0,0,0.3); }
+        .youtube-container { display: flex; gap: 28px; justify-content: center; width: 94%; max-width: 1080px; }
+        .youtube-column    { flex: 1; min-width: 270px; }
+        .youtube-title     { font-size: clamp(1.1rem, 2.5vw, 1.35rem); font-weight: 700; margin-bottom: 8px; text-align: center; color: var(--body-bg); }
+        .youtube-embed iframe { width: 100%; height: clamp(170px, 32vw, 210px); border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.25); }
+        .credit { display: flex; justify-content: center; gap: 32px; flex-wrap: wrap; font-size: clamp(0.85rem, 2vw, 0.95rem); color: var(--body-bg); opacity: 0.85; margin-top: 15px; }
+        .title-label { text-align: center; width: 100%; }
+
+        /* リザルト */
+        #result-screen { background: linear-gradient(135deg, #e0f7ff, #b0e0ff); color: var(--body-bg); }
+        .result-title  { font-size: clamp(4.2rem, 11vw, 7.5rem); margin-bottom: 35px; text-shadow: 0 0 45px var(--accent); }
+        #result-score-area { font-size: 1.65rem; margin: 25px 0; display: flex; justify-content: center; gap: 45px; width: 100%; max-width: 420px; }
+
+        /* win/lose オーバーレイ */
+        #win-lose-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); z-index: 99999; }
+        #win-lose-overlay img { max-width: 92%; max-height: 92%; object-fit: contain; }
+
+        /* リザルトボタン */
+        #result-title-btn, #result-end-btn {
+            padding: 24px 65px;
+            font-size: clamp(1.65rem, 4.8vw, 2.0rem);
+            border-radius: 50px; margin: 20px 12px;
+            box-shadow: 0 14px 35px rgba(0,0,0,0.35);
+            position: relative; overflow: visible;
+            font-weight: 700; border: none; cursor: pointer;
+        }
+        #result-title-btn { background: var(--accent); color: #fff; }
+        #result-end-btn   { background: #fff; color: var(--body-bg); }
+        .winner-crown { position: absolute; font-size: 36px; animation: crownFloat 1.5s ease-in-out infinite alternate; pointer-events: none; }
+        @keyframes crownFloat { from { transform: translateY(0); } to { transform: translateY(-6px); } }
+        #result-snow { position: absolute; top: -26px; left: -26px; font-size: 58px; color: var(--accent); animation: snowRotate 3s linear infinite; pointer-events: none; }
+
+        /* モーダル */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 10000; }
+        .modal-content { background: linear-gradient(135deg, #e0f7ff, #b0e0ff); color: var(--body-bg); padding: 48px 38px; border-radius: 38px; width: 92%; max-width: 420px; text-align: center; box-shadow: 0 30px 60px rgba(0,0,0,0.6); position: relative; overflow: visible; }
+        .modal-content h2 { font-size: 2.1rem; margin-bottom: 28px; }
+        .slider-label { display: block; margin: 32px 0 12px; font-size: 1.3rem; color: var(--body-bg); }
+        input[type="range"] { width: 100%; cursor: pointer; }
+        .modal-content button { background: var(--gold); color: var(--body-bg); border: none; padding: 15px 45px; font-size: 1.4rem; font-weight: 700; border-radius: 50px; cursor: pointer; margin: 14px 10px; }
+        .small-btn { padding: 12px 32px; font-size: 1.2rem; }
+        .snowflake { position: absolute; top: -26px; left: -26px; font-size: 52px; color: var(--accent); animation: snowRotate 4s linear infinite; text-shadow: 0 0 15px #fff; z-index: 10001; pointer-events: none; }
+        @keyframes snowRotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        #bgm-toggle-btn { position: fixed; top: 20px; right: 20px; width: 56px; height: 56px; background: var(--gold); color: var(--body-bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.95rem; box-shadow: 0 6px 18px rgba(0,0,0,0.4); cursor: pointer; z-index: 99999; border: none; -webkit-tap-highlight-color: transparent; }
+        .toggle-sound-btn { background: #4caf50; color: #fff; border: none; padding: 10px 28px; font-size: 1.1rem; font-weight: 700; border-radius: 50px; cursor: pointer; margin: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: background 0.2s; }
+        .toggle-sound-btn.off { background: #aaa; }
+
+        /* 愉悦アンロック演出 */
+        #yuetsu-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: #000; z-index: 999998; flex-direction: column; opacity: 1; transition: opacity 1.2s ease; }
+        #yuetsu-overlay-text { font-family: 'Noto Sans JP', sans-serif; font-weight: 900; color: #ff4500; text-shadow: 0 0 40px #ff4500, 0 0 80px #ff0000, 0 0 120px #ff6600; text-align: center; animation: yuetsuZoomIn 1.4s cubic-bezier(0.16,1,0.3,1) both; }
+        @keyframes yuetsuZoomIn { 0% { transform: scale(0.08); opacity: 0; } 40% { opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+        #yuetsu-overlay.fadeout { opacity: 0; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+<div id="app-wrapper">
+    <div class="snow-background" id="snow-bg"></div>
+
+    <!-- タイトル画面 -->
+    <div id="title-screen" class="screen" role="main">
+        <div class="game-header" style="position:absolute;top:0;width:100%;padding:12px;z-index:10;">
+            <div class="option-btn" id="title-option-btn" role="button" tabindex="0" aria-label="オプションを開く">⚙️</div>
+        </div>
+        <div id="title-fixed-area">
+            <div class="title" style="text-align:center;margin-bottom:4px;">
+                <span class="main-title"><span class="symbol">†</span><span class="text">霜戌REVERSE</span><span class="symbol">†</span></span><br>
+                <span class="subtitle" id="subtitle-text">【表裏】～生と死は等価値～【一体】</span>
+            </div>
+            <p class="title-label" style="font-size:1.1rem;margin:4px 0 8px;">CPU対戦</p>
+            <div class="title-label" style="margin:4px 0;font-size:1.1rem;font-weight:700;">CPUの強さを選んでね！</div>
+            <div class="strength-select" id="strength-select" role="radiogroup" aria-label="CPU強さ選択"></div>
+            <div id="yuetsu-btn-wrap">
+                <div class="strength-btn yuetsu" id="yuetsu-btn"
+                     role="radio" aria-checked="false" tabindex="0"
+                     style="width:clamp(130px,22vw,170px);height:clamp(130px,22vw,170px);">
+                    <img src="yuetu.png" alt="愉悦" style="width:clamp(95px,16vw,125px);height:clamp(95px,16vw,125px);margin-bottom:8px;flex-shrink:0;">
+                    <div>愉悦</div>
+                </div>
+            </div>
+            <div class="title-label" style="margin:4px 0;font-size:1.1rem;font-weight:700;">あなたの色を選んでね！</div>
+            <div class="strength-select" id="color-select" role="radiogroup" aria-label="色選択"></div>
+            <button id="start-btn" class="start-btn">対戦 スタート！</button>
+            <div class="link-area">
+                <a href="https://x.com/shimoinu_reina" target="_blank" rel="noopener noreferrer" style="background:#1DA1F2;color:#fff;">霜戌レイナ Twitter</a>
+                <a href="https://www.youtube.com/channel/UCQsuThhsBtHln3nCOcX-pfg" target="_blank" rel="noopener noreferrer" style="background:#FF0000;color:#fff;">Reina Ch. YouTube</a>
+            </div>
+        </div>
+        <div id="title-scroll-area">
+            <div class="youtube-container">
+                <div class="youtube-column">
+                    <div class="youtube-title">最新配信</div>
+                    <div id="latest-embed" class="youtube-embed"></div>
+                    <p id="no-latest-message" style="display:none;text-align:center;color:#d32f2f;font-size:0.95rem;">取得失敗</p>
+                </div>
+                <div class="youtube-column">
+                    <div class="youtube-title">次回の配信予定</div>
+                    <div id="upcoming-embed" class="youtube-embed"></div>
+                    <p id="no-stream-message" style="display:none;text-align:center;color:#d32f2f;font-size:0.95rem;">取得失敗</p>
+                </div>
+            </div>
+            <div class="credit"><div>音楽：魔王魂様、DOVA-SYNDROME様、Kyatto様</div></div>
+        </div>
+    </div>
+
+    <!-- ゲーム画面 -->
+    <div id="game-screen" class="screen" style="display:none;" role="main">
+        <div class="game-header">
+            <div class="option-btn" id="option-btn" role="button" tabindex="0" aria-label="オプションを開く" style="position:absolute;top:16px;left:16px;">⚙️</div>
+        </div>
+        <div class="game-content">
+            <div class="side-info player-info" id="player-info-pc">
+                <div class="char-img" id="player-char-img-pc"></div>
+                <div class="side-label" id="player-label-pc">YOU</div>
+            </div>
+            <div id="board-container">
+                <canvas id="board-canvas" role="img" aria-label="オセロ盤面" tabindex="0"></canvas>
+            </div>
+            <div class="side-info opponent-info" id="opponent-info-pc">
+                <div class="char-img" id="opponent-char-img-pc"></div>
+                <div class="side-label" id="opponent-label-pc">ENEMY</div>
+            </div>
+            <div class="smartphone-top-bar" id="smartphone-top-bar" style="display:none;" aria-hidden="true">
+                <div class="side-info" id="player-info-mobile">
+                    <div class="char-img" id="player-char-img-mobile"></div>
+                    <div class="side-label" id="player-label-mobile">YOU</div>
+                </div>
+                <div class="side-info" id="opponent-info-mobile">
+                    <div class="char-img" id="opponent-char-img-mobile"></div>
+                    <div class="side-label" id="opponent-label-mobile">ENEMY</div>
+                </div>
+            </div>
+        </div>
+        <div class="status-bar" id="status-bar" role="status" aria-live="polite">あなたの番です（黒）</div>
+    </div>
+
+    <!-- リザルト画面 -->
+    <div id="result-screen" class="screen" style="display:none;" role="main">
+        <div id="result-title" class="result-title">WIN</div>
+        <div class="char-img" id="winner-char-img" style="width:420px;height:420px;margin:30px auto;"></div>
+        <div id="result-score-area">
+            <div id="player-count-area" style="text-align:center;position:relative;">
+                <div style="font-size:1.15rem;margin-bottom:6px;">YOU</div>
+                <span id="final-player-count" style="color:var(--gold);">32</span>
+            </div>
+            <div id="cpu-count-area" style="text-align:center;position:relative;">
+                <div style="font-size:1.15rem;margin-bottom:6px;">ENEMY</div>
+                <span id="final-cpu-count">32</span>
+            </div>
+        </div>
+        <button id="result-title-btn" style="position:relative;overflow:visible;"><span id="result-snow">❄️</span>タイトルに戻る</button>
+        <button id="result-end-btn">ゲームをやめる</button>
+    </div>
+
+    <!-- win/lose/draw オーバーレイ -->
+    <div id="win-lose-overlay" aria-hidden="true"><img id="win-lose-image" alt="勝敗結果"></div>
+
+    <!-- 愉悦アンロック演出 -->
+    <div id="yuetsu-overlay" aria-hidden="true">
+        <div id="yuetsu-overlay-text" style="font-size:clamp(3rem,12vw,7rem);">† 愉悦 †</div>
+    </div>
+
+    <!-- オプションモーダル -->
+    <div class="modal" id="option-modal" role="dialog" aria-modal="true" aria-labelledby="option-modal-title">
+        <div class="modal-content">
+            <div class="snowflake" aria-hidden="true">❄️</div>
+            <h2 id="option-modal-title">オプション</h2>
+            <label class="slider-label" for="voice-volume-slider">SE音量</label>
+            <input type="range" id="voice-volume-slider" min="0" max="1" step="0.1" value="0.9" aria-label="SE音量">
+            <label class="slider-label" for="bgm-volume-slider">BGM音量</label>
+            <input type="range" id="bgm-volume-slider" min="0" max="1" step="0.1" value="0.2" aria-label="BGM音量">
+            <div style="margin-top:22px;display:flex;flex-wrap:wrap;justify-content:center;gap:8px;">
+                <button class="toggle-sound-btn" id="se-toggle-btn">SE：ON</button>
+                <button class="toggle-sound-btn" id="bgm-toggle-option-btn">BGM：ON</button>
+            </div>
+            <button id="btn-title-back" style="margin-top:30px;">タイトルに戻る</button>
+            <button id="btn-end-game" class="small-btn" style="margin-top:8px;background:#ff6666;color:#fff;">ゲームをやめる</button>
+            <button id="btn-close-option" class="small-btn">閉じる</button>
+        </div>
+    </div>
+
+    <!-- BGM確認モーダル -->
+    <div class="modal" id="bgm-confirm-modal" style="z-index:3000;" role="dialog" aria-modal="true" aria-labelledby="bgm-confirm-title">
+        <div class="modal-content">
+            <div class="snowflake" aria-hidden="true">❄️</div>
+            <h2 id="bgm-confirm-title" style="margin-top:38px;">BGMを再生しますか？</h2>
+            <p style="margin-bottom:38px;font-size:1.3rem;line-height:1.5;">はいを押すと音が流れます。<br>公共の場では気を付けてね！</p>
+            <button id="bgm-yes-btn" style="background:var(--accent);color:#fff;margin:12px 18px;padding:15px 48px;">はい</button>
+            <button id="bgm-no-btn" class="small-btn" style="margin:12px 18px;">いいえ</button>
+        </div>
+    </div>
+
+    <!-- 終了確認モーダル -->
+    <div class="modal" id="end-modal" style="z-index:2000;" role="dialog" aria-modal="true" aria-labelledby="end-modal-desc">
+        <div class="modal-content">
+            <div class="snowflake" aria-hidden="true">❄️</div>
+            <p id="end-modal-desc" style="font-size:1.5rem;line-height:1.5;margin:38px 0 38px;">ブラウザゲームだから<br>×ボタンでやめてね！</p>
+            <button id="close-end-modal" class="small-btn">OK</button>
+        </div>
+    </div>
+
+    <button id="bgm-toggle-btn" aria-label="BGMのON/OFF切替">▶️</button>
+</div>
+
+<script>
+'use strict';
+
+// ===== 定数 =====
+const BOARD_SIZE         = 8;
+const CELL_PADDING_RATIO = 0.42;
+const SPECIAL_PROB       = 1 / 1017;
+const FLIP_INTERVAL_MS   = 30;
+const CPU_THINK_DELAY_MS = 800;
+const DIRECTIONS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+const POSITION_WEIGHT = [
+    [100,-30,10,5,5,10,-30,100],
+    [-30,-50,1,1,1,1,-50,-30],
+    [10,1,5,2,2,5,1,10],
+    [5,1,2,1,1,2,1,5],
+    [5,1,2,1,1,2,1,5],
+    [10,1,5,2,2,5,1,10],
+    [-30,-50,1,1,1,1,-50,-30],
+    [100,-30,10,5,5,10,-30,100],
+];
+
+// ===== YouTube API キー =====
+// GitHub Actions が __YOUTUBE_API_KEY__ をデプロイ時に自動置換します。
+// ローカル確認は index.local.html を使ってください（.gitignore 登録済み）。
+const YOUTUBE_API_KEY = '__YOUTUBE_API_KEY__';
+const CHANNEL_ID      = 'UCQsuThhsBtHln3nCOcX-pfg';
+
+// ===== キャンバス =====
+const canvas = document.getElementById('board-canvas');
+const ctx    = canvas.getContext('2d');
+
+// ===== 状態 =====
+let board        = createEmptyBoard();
+let pieceVariant = createEmptyBoard(null);
+let playerColor  = 1;
+let cpuColor     = 2;
+let cpuStrength  = 'ふつう';
+let currentPlayer   = 1;
+let gameOver        = false;
+let isFlipping      = false;
+let resultPhaseActive  = false;
+let yuetsuEffectPlaying = false;
+let modalOpenedFrom    = null;
+let finalBlackCount = 0;
+let finalWhiteCount = 0;
+let CELL_SIZE   = 105;
+let currentDPR  = 1;
+let yuetsuUnlocked      = false;
+let pendingYuetsuUnlock = false;
+
+// ===== 画像 =====
+let blackPieceImgs  = [];
+let whitePieceImgs  = [];
+let whiteSpecialImg = new Image();
+let winBlackImg = new Image(), winWhiteImg = new Image(), winSpecialImg = new Image();
+
+// ===== 音声 =====
+let reversePlayerSounds = [], reverseCpuSounds = [];
+let winResultSoundsArray = [], loseResultSoundsArray = [];
+let bgmAudio = null, titleBGM = null, yuetsuBGM = null, yuetsuUnlockBGM = null;
+let winSeAudio = null, winSAudio = null, clapAudio = null;
+let loseSeAudio = null, loseSakebiAudio = null, drumRoalAudio = null;
+let drawSeAudio = null, drawVoiceAudio = null, drawResultAudio = null;
+let voiceVolume = 0.9, bgmVolume = 0.2;
+let soundEnabled = false, seEnabled = true, bgmEnabled = true;
+let audioContextUnlocked = false;
+
+// ===== ユーティリティ =====
+function createEmptyBoard(fill = 0) {
+    return Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(fill));
+}
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ===== 画像ロード =====
+function loadImages() {
+    blackPieceImgs = [];
+    for (let i = 0; i <= 6; i++) {
+        const img = new Image();
+        img.src = i === 0 ? '黒.png' : `黒${i}.png`;
+        blackPieceImgs.push(img);
+    }
+    whitePieceImgs = [];
+    for (let i = 0; i <= 7; i++) {
+        const img = new Image();
+        img.src = i === 0 ? '白.png' : `白${i}.png`;
+        whitePieceImgs.push(img);
+    }
+    whiteSpecialImg.src = '白s.png';
+    winBlackImg.src     = 'win_black.png';
+    winWhiteImg.src     = 'win_white.png';
+    winSpecialImg.src   = 'win_s.png';
+}
+
+function pickBlackImg() { return blackPieceImgs[Math.floor(Math.random() * blackPieceImgs.length)]; }
+function pickWhiteImg() { return Math.random() < SPECIAL_PROB ? whiteSpecialImg : whitePieceImgs[Math.floor(Math.random() * whitePieceImgs.length)]; }
+function pickImg(color) { return color === 1 ? pickBlackImg() : pickWhiteImg(); }
+
+// ===== 音声初期化 =====
+function initAudio() {
+    const mk = (src, vol) => { const a = new Audio(src); a.volume = vol; return a; };
+    for (let i = 1; i <= 5; i++) {
+        reversePlayerSounds.push(mk(`reverse${i}.mp3`,     voiceVolume));
+        reverseCpuSounds.push(   mk(`reverse${i + 5}.mp3`, voiceVolume));
+        winResultSoundsArray.push( mk(`win_result${i}.mp3`,  voiceVolume));
+        loseResultSoundsArray.push(mk(`lose_result${i}.mp3`, voiceVolume));
+    }
+    bgmAudio        = mk('shower.mp3',      bgmVolume); bgmAudio.loop        = true;
+    titleBGM        = mk('get-ready.mp3',   bgmVolume); titleBGM.loop        = true;
+    yuetsuBGM       = mk('yuetu_bgm.mp3',   bgmVolume); yuetsuBGM.loop       = true;
+    yuetsuUnlockBGM = mk('yuetu.mp3',       bgmVolume);
+    winSeAudio      = mk('win_se.mp3',      voiceVolume);
+    winSAudio       = mk('win_s.mp3',       voiceVolume);
+    clapAudio       = mk('clap.mp3',        voiceVolume);
+    loseSeAudio     = mk('lose_se.mp3',     voiceVolume);
+    loseSakebiAudio = mk('lose_sakebi.mp3', voiceVolume);
+    drumRoalAudio   = mk('drum_rool.mp3',   voiceVolume);
+    drawSeAudio     = mk('draw_se.mp3',     voiceVolume);
+    drawVoiceAudio  = mk('draw_voice.mp3',  voiceVolume);
+    drawResultAudio = mk('draw_result.mp3', voiceVolume);
+}
+
+async function unlockAudioContext() {
+    if (audioContextUnlocked) return;
+    audioContextUnlocked = true;
+    try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        const ac = new AC();
+        await ac.resume();
+        const osc = ac.createOscillator(), g = ac.createGain();
+        g.gain.value = 0; osc.connect(g); g.connect(ac.destination);
+        osc.start(0); osc.stop(0.001);
+    } catch (_) {}
+}
+
+function playSound(audio) {
+    if (!soundEnabled || !seEnabled || !audio) return;
+    const a = new Audio(audio.src);
+    a.volume = voiceVolume;
+    a.play().catch(() => {});
+}
+function playBGM(audio) {
+    if (!soundEnabled || !bgmEnabled || !audio) return;
+    audio.currentTime = 0; audio.volume = bgmVolume;
+    audio.play().catch(() => {});
+}
+function stopAllBGM() {
+    [titleBGM, bgmAudio, yuetsuBGM, yuetsuUnlockBGM].forEach(a => {
+        if (a && !a.paused) { a.pause(); a.currentTime = 0; }
+    });
+}
+function playSoundAndWait(audio, maxWaitMs) {
+    return new Promise(resolve => {
+        if (!audio || !soundEnabled || !seEnabled) { resolve(); return; }
+        const a = new Audio(audio.src);
+        a.volume = voiceVolume;
+        let done = false;
+        const finish = () => { if (!done) { done = true; resolve(); } };
+        const timer = setTimeout(finish, maxWaitMs);
+        a.onended = () => { clearTimeout(timer); finish(); };
+        a.onerror = () => { clearTimeout(timer); finish(); };
+        a.play().catch(() => { clearTimeout(timer); finish(); });
+    });
+}
+
+// ===== ゲームロジック =====
+function getFlips(r, c, player) {
+    if (board[r][c] !== 0) return [];
+    const opp = player === 1 ? 2 : 1;
+    let flips = [];
+    for (const [dr, dc] of DIRECTIONS) {
+        let nr = r + dr, nc = c + dc, temp = [];
+        while (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE && board[nr][nc] === opp) {
+            temp.push([nr, nc]); nr += dr; nc += dc;
+        }
+        if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE && board[nr][nc] === player && temp.length) {
+            flips = flips.concat(temp);
+        }
+    }
+    return flips;
+}
+function getValidMoves(player) {
+    const moves = [];
+    for (let r = 0; r < BOARD_SIZE; r++)
+        for (let c = 0; c < BOARD_SIZE; c++) {
+            const f = getFlips(r, c, player);
+            if (f.length) moves.push({ r, c, flips: f });
+        }
+    return moves;
+}
+
+// ===== キャンバス描画 =====
+function resizeCanvas() {
+    const container = document.getElementById('board-container');
+    if (!container) return;
+    currentDPR = window.devicePixelRatio || 1;
+    const rect    = container.getBoundingClientRect();
+    const cs      = getComputedStyle(container);
+    const border  = parseFloat(cs.borderWidth) || 18;
+    const padding = parseFloat(cs.padding)     || 18;
+    const iw = rect.width - 2 * (border + padding);
+    canvas.width  = iw * currentDPR;
+    canvas.height = iw * currentDPR;
+    canvas.style.width  = `${iw}px`;
+    canvas.style.height = `${iw}px`;
+    ctx.setTransform(currentDPR, 0, 0, currentDPR, 0, 0);
+    CELL_SIZE = iw / BOARD_SIZE;
+    drawBoard();
+}
+function drawBoard() {
+    const W = canvas.width / currentDPR, H = canvas.height / currentDPR;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#0f4a0f'; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
+    for (let i = 0; i <= BOARD_SIZE; i++) {
+        ctx.beginPath(); ctx.moveTo(i * CELL_SIZE, 0); ctx.lineTo(i * CELL_SIZE, H); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, i * CELL_SIZE); ctx.lineTo(W, i * CELL_SIZE); ctx.stroke();
+    }
+    for (let r = 0; r < BOARD_SIZE; r++)
+        for (let c = 0; c < BOARD_SIZE; c++) {
+            if (!board[r][c]) continue;
+            const x = c * CELL_SIZE + CELL_SIZE / 2, y = r * CELL_SIZE + CELL_SIZE / 2;
+            const size = CELL_SIZE * CELL_PADDING_RATIO;
+            const img  = pieceVariant[r][c];
+            if (img && img.complete) ctx.drawImage(img, x - size, y - size, size * 2, size * 2);
+        }
+    if (!isFlipping && currentPlayer === playerColor && !gameOver) {
+        ctx.fillStyle = 'rgba(255,215,0,0.4)';
+        for (const m of getValidMoves(playerColor)) {
+            ctx.beginPath();
+            ctx.arc(m.c * CELL_SIZE + CELL_SIZE / 2, m.r * CELL_SIZE + CELL_SIZE / 2, 18, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+}
+
+// ===== コマ配置 =====
+async function placePiece(r, c, placingColor) {
+    if (gameOver || isFlipping) return;
+    const flips = getFlips(r, c, placingColor);
+    if (!flips.length) return;
+    isFlipping = true;
+    board[r][c] = placingColor; pieceVariant[r][c] = pickImg(placingColor);
+    drawBoard();
+    const revList  = placingColor === playerColor ? reversePlayerSounds : reverseCpuSounds;
+    const chosenRev = revList[Math.floor(Math.random() * revList.length)];
+    for (let i = 0; i < flips.length; i++) {
+        const [fr, fc] = flips[i];
+        await new Promise(resolve => {
+            setTimeout(() => {
+                board[fr][fc] = placingColor; pieceVariant[fr][fc] = pickImg(placingColor); drawBoard();
+                if (chosenRev && soundEnabled && seEnabled) {
+                    const a = new Audio(chosenRev.src); a.volume = voiceVolume;
+                    let resolved = false;
+                    const done = () => { if (!resolved) { resolved = true; resolve(); } };
+                    a.onended = done; a.onerror = done; a.play().catch(done); setTimeout(done, 3000);
+                } else { resolve(); }
+            }, i * FLIP_INTERVAL_MS);
+        });
+    }
+    isFlipping = false;
+    currentPlayer = placingColor === 1 ? 2 : 1;
+    updateStatus(); drawBoard();
+    setTimeout(() => { if (!gameOver) checkNextTurn(); }, 300);
+}
+
+function updateStatus() {
+    const piece = playerColor === 1 ? '黒' : '白';
+    document.getElementById('status-bar').innerHTML =
+        currentPlayer === playerColor ? `あなたの番です（${piece}）` : `CPUの番（${playerColor === 1 ? '白' : '黒'}）`;
+}
+function checkNextTurn() {
+    const moves = getValidMoves(currentPlayer);
+    if (!moves.length) {
+        const next = currentPlayer === 1 ? 2 : 1;
+        if (!getValidMoves(next).length) { endGame(); return; }
+        currentPlayer = next; updateStatus(); drawBoard();
+        if (currentPlayer === cpuColor) cpuTurn();
+        return;
+    }
+    if (currentPlayer === cpuColor) cpuTurn();
+}
+
+// ===== CPU AI =====
+function cpuTurn() {
+    const moves = getValidMoves(cpuColor);
+    if (!moves.length) return;
+    let chosen;
+    switch (cpuStrength) {
+        case 'よわい': chosen = moves[Math.floor(Math.random() * moves.length)]; break;
+        case 'ふつう': chosen = moves.reduce((a, b) => a.flips.length > b.flips.length ? a : b); break;
+        case 'つよい':
+            chosen = moves.reduce((best, m) => {
+                const sc = m.flips.length * 10 + POSITION_WEIGHT[m.r][m.c];
+                const bs = best.flips.length * 10 + POSITION_WEIGHT[best.r][best.c];
+                return sc > bs ? m : best;
+            }, moves[0]);
+            break;
+        case '愉悦': chosen = minimaxBestMove(moves, 3); break;
+        default:      chosen = moves[Math.floor(Math.random() * moves.length)];
+    }
+    setTimeout(() => placePiece(chosen.r, chosen.c, cpuColor), CPU_THINK_DELAY_MS);
+}
+function boardScore(color) {
+    let score = 0;
+    for (let r = 0; r < BOARD_SIZE; r++) for (let c = 0; c < BOARD_SIZE; c++) {
+        if      (board[r][c] === color) score += POSITION_WEIGHT[r][c] + 5;
+        else if (board[r][c] !== 0)     score -= POSITION_WEIGHT[r][c] + 5;
+    }
+    score += getValidMoves(color).length * 8;
+    score -= getValidMoves(color === 1 ? 2 : 1).length * 8;
+    return score;
+}
+function applyMove(r, c, color) {
+    const flips = getFlips(r, c, color);
+    board[r][c] = color;
+    for (const [fr, fc] of flips) board[fr][fc] = color;
+    return flips;
+}
+function undoMove(r, c, origColor, flips) {
+    board[r][c] = 0;
+    const opp = origColor === 1 ? 2 : 1;
+    for (const [fr, fc] of flips) board[fr][fc] = opp;
+}
+function alphabeta(depth, color, alpha, beta, isMax) {
+    const moves = getValidMoves(color);
+    if (depth === 0 || !moves.length) return boardScore(cpuColor);
+    if (isMax) {
+        let val = -Infinity;
+        for (const m of moves) {
+            const f = applyMove(m.r, m.c, color);
+            val = Math.max(val, alphabeta(depth - 1, color === 1 ? 2 : 1, alpha, beta, false));
+            undoMove(m.r, m.c, color, f); alpha = Math.max(alpha, val);
+            if (alpha >= beta) break;
+        }
+        return val;
+    } else {
+        let val = Infinity;
+        for (const m of moves) {
+            const f = applyMove(m.r, m.c, color);
+            val = Math.min(val, alphabeta(depth - 1, color === 1 ? 2 : 1, alpha, beta, true));
+            undoMove(m.r, m.c, color, f); beta = Math.min(beta, val);
+            if (alpha >= beta) break;
+        }
+        return val;
+    }
+}
+function minimaxBestMove(moves, depth) {
+    let bestVal = -Infinity, bestMove = moves[0];
+    for (const m of moves) {
+        const f   = applyMove(m.r, m.c, cpuColor);
+        const val = alphabeta(depth - 1, cpuColor === 1 ? 2 : 1, -Infinity, Infinity, false);
+        undoMove(m.r, m.c, cpuColor, f);
+        if (val > bestVal) { bestVal = val; bestMove = m; }
+    }
+    return bestMove;
+}
+
+// ===== ゲーム終了 =====
+function endGame() {
+    gameOver = true; resultPhaseActive = true; stopAllBGM();
+    let black = 0, white = 0;
+    for (let r = 0; r < BOARD_SIZE; r++) for (let c = 0; c < BOARD_SIZE; c++) {
+        if (board[r][c] === 1) black++; else if (board[r][c] === 2) white++;
+    }
+    finalBlackCount = black; finalWhiteCount = white;
+    document.getElementById('status-bar').innerHTML = '最終スコアを並べています…';
+    setTimeout(() => runScoreAndResultSequence(), 800);
+}
+async function runScoreAndResultSequence() {
+    board = createEmptyBoard(); pieceVariant = createEmptyBoard(null); drawBoard();
+    let drumPromise = Promise.resolve();
+    if (soundEnabled && seEnabled && drumRoalAudio) drumPromise = playSoundAndWait(drumRoalAudio, 8000);
+    const total = finalBlackCount + finalWhiteCount;
+    const interval = total > 0 ? 3000 / total : 35;
+    let bp = 0, wp = 0;
+    await new Promise(resolve => {
+        const placeNext = () => {
+            let placed = false;
+            if (bp < finalBlackCount) {
+                board[Math.floor(bp / BOARD_SIZE)][bp % BOARD_SIZE] = 1;
+                pieceVariant[Math.floor(bp / BOARD_SIZE)][bp % BOARD_SIZE] = pickBlackImg();
+                bp++; placed = true;
+            }
+            if (wp < finalWhiteCount) {
+                const pos = (BOARD_SIZE * BOARD_SIZE - 1) - wp;
+                board[Math.floor(pos / BOARD_SIZE)][pos % BOARD_SIZE] = 2;
+                pieceVariant[Math.floor(pos / BOARD_SIZE)][pos % BOARD_SIZE] = pickWhiteImg();
+                wp++; placed = true;
+            }
+            drawBoard();
+            if (placed) setTimeout(placeNext, interval); else resolve();
+        };
+        placeNext();
+    });
+    await drumPromise;
+    const pf = playerColor === 1 ? finalBlackCount : finalWhiteCount;
+    const cf = playerColor === 1 ? finalWhiteCount  : finalBlackCount;
+    if (!yuetsuUnlocked && cpuStrength === 'つよい' && pf > cf) pendingYuetsuUnlock = true;
+    showWinLoseOverlayAndProceed();
+}
+async function showWinLoseOverlayAndProceed() {
+    const pf = playerColor === 1 ? finalBlackCount : finalWhiteCount;
+    const cf = playerColor === 1 ? finalWhiteCount  : finalBlackCount;
+    const isWin = pf > cf, isDraw = pf === cf;
+    showWinLoseOverlay(isWin ? 'win' : isDraw ? 'draw' : 'lose');
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    if (!soundEnabled || !seEnabled) {
+        await wait(2000);
+    } else if (isWin) {
+        await Promise.all([playSoundAndWait(winSeAudio, 6000), playSoundAndWait(clapAudio, 6000)]);
+    } else if (isDraw) {
+        await Promise.all([playSoundAndWait(drawSeAudio, 6000), playSoundAndWait(drawVoiceAudio, 6000)]);
+    } else {
+        await Promise.all([playSoundAndWait(loseSeAudio, 6000), playSoundAndWait(loseSakebiAudio, 6000)]);
+    }
+    setTimeout(showResultScreen, 300);
+}
+function showWinLoseOverlay(type) {
+    const o = document.getElementById('win-lose-overlay');
+    document.getElementById('win-lose-image').src = type === 'win' ? 'win.png' : type === 'lose' ? 'lose.png' : 'draw.png';
+    o.style.display = 'flex'; o.removeAttribute('aria-hidden');
+}
+function hideWinLoseOverlay() {
+    const o = document.getElementById('win-lose-overlay');
+    o.style.display = 'none'; o.setAttribute('aria-hidden', 'true');
+}
+
+// ===== リザルト =====
+function showResultScreen() {
+    hideWinLoseOverlay();
+    document.getElementById('game-screen').style.display = 'none';
+    stopAllBGM(); resultPhaseActive = false;
+    document.getElementById('result-screen').style.display = 'flex';
+    const pf = playerColor === 1 ? finalBlackCount : finalWhiteCount;
+    const cf = playerColor === 1 ? finalWhiteCount  : finalBlackCount;
+    document.getElementById('final-player-count').textContent = pf;
+    document.getElementById('final-cpu-count').textContent    = cf;
+    document.querySelectorAll('.winner-crown').forEach(el => el.remove());
+    const titleEl   = document.getElementById('result-title');
+    const winnerImg = document.getElementById('winner-char-img');
+    if (pf > cf) {
+        titleEl.textContent = 'WIN'; titleEl.style.color = '#ffd700';
+        const isSpecial = cpuStrength === '愉悦' || Math.random() < SPECIAL_PROB;
+        winnerImg.innerHTML = `<img src="${isSpecial ? 'win_s.png' : (playerColor === 1 ? 'win_black.png' : 'win_white.png')}" alt="WIN" style="width:100%;height:100%;object-fit:contain;">`;
+        const crown = document.createElement('span');
+        crown.className = 'winner-crown'; crown.textContent = '👑'; crown.style.left = '-36px'; crown.style.top = '4px';
+        document.getElementById('player-count-area').appendChild(crown);
+        if (soundEnabled && seEnabled) {
+            cpuStrength === '愉悦' ? playSound(winSAudio) : playSound(winResultSoundsArray[Math.floor(Math.random() * winResultSoundsArray.length)]);
+        }
+    } else if (cf > pf) {
+        titleEl.textContent = 'LOSE'; titleEl.style.color = '#ff4444';
+        winnerImg.innerHTML = `<img src="${playerColor === 1 ? 'lose_black.png' : 'lose_white.png'}" alt="LOSE" style="width:100%;height:100%;object-fit:contain;">`;
+        const crown = document.createElement('span');
+        crown.className = 'winner-crown'; crown.textContent = '👑'; crown.style.right = '-36px'; crown.style.top = '4px';
+        document.getElementById('cpu-count-area').appendChild(crown);
+        if (soundEnabled && seEnabled && loseResultSoundsArray.length)
+            playSound(loseResultSoundsArray[Math.floor(Math.random() * loseResultSoundsArray.length)]);
+    } else {
+        titleEl.textContent = 'DRAW'; titleEl.style.color = '#aaa';
+        winnerImg.innerHTML = `<img src="draw_result.png" alt="DRAW" style="width:100%;height:100%;object-fit:contain;">`;
+        if (soundEnabled && seEnabled) playSound(drawResultAudio);
+    }
+}
+
+// ===== 愉悦アンロック演出 =====
+async function playYuetsuUnlockEffect() {
+    yuetsuUnlocked = true; pendingYuetsuUnlock = false; yuetsuEffectPlaying = true;
+    const overlay = document.getElementById('yuetsu-overlay');
+    const textEl  = document.getElementById('yuetsu-overlay-text');
+    if (soundEnabled && bgmEnabled && yuetsuUnlockBGM) {
+        yuetsuUnlockBGM.currentTime = 0; yuetsuUnlockBGM.volume = bgmVolume;
+        yuetsuUnlockBGM.play().catch(() => {});
+    }
+    let yuetsuImg = document.getElementById('yuetsu-reveal-img');
+    if (!yuetsuImg) {
+        yuetsuImg = document.createElement('img');
+        yuetsuImg.id = 'yuetsu-reveal-img'; yuetsuImg.src = 'yuetu.png'; yuetsuImg.alt = '愉悦';
+        Object.assign(yuetsuImg.style, { position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', maxWidth:'100vw', maxHeight:'100vh', width:'auto', height:'auto', objectFit:'contain', opacity:'0', transition:'opacity 2.5s ease', pointerEvents:'none', zIndex:'1' });
+        overlay.appendChild(yuetsuImg);
+    } else {
+        yuetsuImg.style.opacity = '0'; yuetsuImg.style.transition = 'opacity 2.5s ease';
+    }
+    const msgs = [
+        { text: '新たな強敵に挑む気はあるか？', dur: 2200 },
+        { text: '解放された…',                  dur: 1800 },
+        { text: '新たな強敵',                    dur: 2200 },
+        { text: 'その名も…',                     dur: 2000 },
+        { text: '',                              dur:  800, blank: true },
+        { text: '† 愉悦 †',                     dur: 3500 },
+    ];
+    overlay.style.opacity = '1'; overlay.classList.remove('fadeout');
+    overlay.style.display = 'flex'; overlay.removeAttribute('aria-hidden');
+    for (const msg of msgs) {
+        if (msg.blank) { textEl.style.animation = 'none'; textEl.textContent = ''; await wait(msg.dur); continue; }
+        textEl.style.animation = 'none'; textEl.textContent = msg.text; void textEl.offsetWidth;
+        const zoomDur = msg.text === '† 愉悦 †' ? 2000 : Math.min(msg.dur * 0.55, 1100);
+        textEl.style.animation = `yuetsuZoomIn ${zoomDur}ms cubic-bezier(0.16,1,0.3,1) both`;
+        if (msg.text === '† 愉悦 †') {
+            await wait(Math.max(msg.dur - 2000, 500));
+            requestAnimationFrame(() => { yuetsuImg.style.opacity = '0.5'; });
+            await wait(2000);
+        } else { await wait(msg.dur); }
+    }
+    overlay.classList.add('fadeout');
+    const fadeSteps = 24, origVol = yuetsuUnlockBGM ? yuetsuUnlockBGM.volume : 0;
+    for (let i = fadeSteps - 1; i >= 0; i--) {
+        await wait(1500 / fadeSteps);
+        if (yuetsuUnlockBGM) yuetsuUnlockBGM.volume = origVol * (i / fadeSteps);
+    }
+    if (yuetsuUnlockBGM && !yuetsuUnlockBGM.paused) { yuetsuUnlockBGM.pause(); yuetsuUnlockBGM.currentTime = 0; yuetsuUnlockBGM.volume = bgmVolume; }
+    overlay.style.display = 'none'; overlay.classList.remove('fadeout'); overlay.setAttribute('aria-hidden', 'true');
+    yuetsuImg.style.opacity = '0'; yuetsuImg.style.transition = 'none';
+    yuetsuEffectPlaying = false;
+    const wrap = document.getElementById('yuetsu-btn-wrap');
+    wrap.style.display = 'flex'; wrap.style.opacity = '0'; wrap.style.transition = 'opacity 0.8s';
+    requestAnimationFrame(() => requestAnimationFrame(() => { wrap.style.opacity = '1'; }));
+}
+
+// ===== UI生成 =====
+function createStrengthSelect() {
+    const container = document.getElementById('strength-select');
+    container.innerHTML = '';
+    [{ name:'よわい', img:'easy.png', val:'よわい' }, { name:'ふつう', img:'normal.png', val:'ふつう' }, { name:'つよい', img:'hard.png', val:'つよい' }]
+    .forEach(item => {
+        const btn = document.createElement('div');
+        btn.className = 'strength-btn';
+        btn.setAttribute('role', 'radio');
+        btn.setAttribute('aria-checked', item.val === 'ふつう' ? 'true' : 'false');
+        btn.setAttribute('tabindex', '0');
+        btn.innerHTML = `<img src="${item.img}" alt="${item.name}"><div>${item.name}</div>`;
+        btn.addEventListener('click', () => selectStrength(item.val));
+        btn.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') selectStrength(item.val); });
+        container.appendChild(btn);
+        if (item.val === 'ふつう') btn.classList.add('selected');
+    });
+    document.getElementById('yuetsu-btn').addEventListener('click',   () => selectStrength('愉悦'));
+    document.getElementById('yuetsu-btn').addEventListener('keydown', e  => { if (e.key === 'Enter' || e.key === ' ') selectStrength('愉悦'); });
+}
+function selectStrength(val) {
+    document.querySelectorAll('#strength-select .strength-btn').forEach(b => { b.classList.remove('selected'); b.setAttribute('aria-checked', 'false'); });
+    const yb = document.getElementById('yuetsu-btn'); yb.classList.remove('selected'); yb.setAttribute('aria-checked', 'false');
+    if (val === '愉悦') { yb.classList.add('selected'); yb.setAttribute('aria-checked', 'true'); }
+    else document.querySelectorAll('#strength-select .strength-btn').forEach(b => {
+        if (b.querySelector('div')?.textContent === val) { b.classList.add('selected'); b.setAttribute('aria-checked', 'true'); }
+    });
+    cpuStrength = val;
+}
+function createColorSelect() {
+    const container = document.getElementById('color-select');
+    container.innerHTML = '';
+    [{ name:'黒（先行）', val:1, img:'黒5.png' }, { name:'白（後攻）', val:2, img:'白7.png' }]
+    .forEach(item => {
+        const btn = document.createElement('div');
+        btn.className = 'strength-btn';
+        btn.setAttribute('role', 'radio'); btn.setAttribute('aria-checked', item.val === 1 ? 'true' : 'false'); btn.setAttribute('tabindex', '0');
+        btn.innerHTML = `<img src="${item.img}" alt="${item.name}"><div>${item.name}</div>`;
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#color-select .strength-btn').forEach(b => { b.classList.remove('selected'); b.setAttribute('aria-checked', 'false'); });
+            btn.classList.add('selected'); btn.setAttribute('aria-checked', 'true'); playerColor = item.val;
+        });
+        btn.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') btn.click(); });
+        container.appendChild(btn);
+        if (item.val === 1) btn.classList.add('selected');
+    });
+}
+
+// ===== 音量 =====
+function applyVolumeToAll() {
+    voiceVolume = parseFloat(document.getElementById('voice-volume-slider').value);
+    bgmVolume   = parseFloat(document.getElementById('bgm-volume-slider').value);
+    [...reversePlayerSounds, ...reverseCpuSounds, winSeAudio, winSAudio, clapAudio, loseSeAudio, loseSakebiAudio, drumRoalAudio, drawSeAudio, drawVoiceAudio, ...winResultSoundsArray, ...loseResultSoundsArray, drawResultAudio]
+        .forEach(a => { if (a) a.volume = voiceVolume; });
+    [bgmAudio, titleBGM, yuetsuBGM, yuetsuUnlockBGM].forEach(a => { if (a) a.volume = bgmVolume; });
+}
+function setupSlider(slider) {
+    let dragging = false;
+    const update = e => {
+        const rect  = slider.getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        const min = parseFloat(slider.min), max = parseFloat(slider.max), step = parseFloat(slider.step);
+        slider.value = (Math.round((min + ratio * (max - min)) / step) * step).toFixed(1);
+        applyVolumeToAll();
+    };
+    slider.addEventListener('pointerdown', e => { dragging = true; slider.setPointerCapture(e.pointerId); update(e); });
+    slider.addEventListener('pointermove', e => { if (dragging) update(e); });
+    slider.addEventListener('pointerup',   e => { dragging = false; update(e); slider.releasePointerCapture(e.pointerId); });
+    slider.addEventListener('pointercancel', () => { dragging = false; });
+    slider.addEventListener('input',  applyVolumeToAll);
+    slider.addEventListener('change', applyVolumeToAll);
+}
+function updateSoundToggleButtons() {
+    const seBtn  = document.getElementById('se-toggle-btn');
+    const bgmBtn = document.getElementById('bgm-toggle-option-btn');
+    seBtn.textContent  = `SE：${seEnabled  ? 'ON' : 'OFF'}`; seBtn.classList.toggle('off',  !seEnabled);
+    bgmBtn.textContent = `BGM：${bgmEnabled ? 'ON' : 'OFF'}`; bgmBtn.classList.toggle('off', !bgmEnabled);
+}
+
+// ===== イベント =====
+function setupEvents() {
+    canvas.addEventListener('click', e => handleCanvasInput(e, false));
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); handleCanvasInput(e, true); }, { passive: false });
+    function handleCanvasInput(e, isTouch) {
+        if (isFlipping || currentPlayer !== playerColor || gameOver) return;
+        const rect = canvas.getBoundingClientRect();
+        const cx = isTouch ? e.touches[0].clientX : e.clientX;
+        const cy = isTouch ? e.touches[0].clientY : e.clientY;
+        const lx = (cx - rect.left) * (canvas.width  / rect.width)  / currentDPR;
+        const ly = (cy - rect.top)  * (canvas.height / rect.height) / currentDPR;
+        const r = Math.floor(ly / CELL_SIZE), c = Math.floor(lx / CELL_SIZE);
+        if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE) return;
+        placePiece(r, c, playerColor);
+    }
+    function openOption(from) {
+        modalOpenedFrom = from;
+        document.getElementById('option-modal').style.display = 'flex';
+        document.getElementById('btn-title-back').style.display = from === 'game' ? 'inline-block' : 'none';
+        document.getElementById('btn-end-game').style.display   = from === 'game' ? 'inline-block' : 'none';
+    }
+    ['option-btn', 'title-option-btn'].forEach(id => {
+        const el = document.getElementById(id);
+        const from = id === 'option-btn' ? 'game' : 'title';
+        el.addEventListener('click',   () => openOption(from));
+        el.addEventListener('keydown', e => { if (e.key === 'Enter') openOption(from); });
+    });
+    setupSlider(document.getElementById('voice-volume-slider'));
+    setupSlider(document.getElementById('bgm-volume-slider'));
+    document.getElementById('se-toggle-btn').addEventListener('click', () => { seEnabled = !seEnabled; updateSoundToggleButtons(); });
+    document.getElementById('bgm-toggle-option-btn').addEventListener('click', () => {
+        bgmEnabled = !bgmEnabled;
+        if (bgmEnabled && soundEnabled) {
+            const onTitle = document.getElementById('title-screen').style.display !== 'none';
+            const onGame  = document.getElementById('game-screen').style.display  !== 'none' && !gameOver;
+            if (onTitle) playBGM(titleBGM);
+            else if (onGame) playBGM(cpuStrength === '愉悦' ? yuetsuBGM : bgmAudio);
+        } else { stopAllBGM(); }
+        updateSoundToggleButtons();
+    });
+    document.getElementById('btn-close-option').addEventListener('click', () => { document.getElementById('option-modal').style.display = 'none'; });
+    document.getElementById('btn-title-back').addEventListener('click',   () => { document.getElementById('option-modal').style.display = 'none'; goToTitle(); });
+    document.getElementById('btn-end-game').addEventListener('click',     () => { document.getElementById('option-modal').style.display = 'none'; modalOpenedFrom = 'game'; document.getElementById('end-modal').style.display = 'flex'; });
+    document.getElementById('close-end-modal').addEventListener('click',  () => {
+        document.getElementById('end-modal').style.display = 'none';
+        const screenMap = { title:'title-screen', game:'game-screen', result:'result-screen' };
+        if (modalOpenedFrom && screenMap[modalOpenedFrom]) document.getElementById(screenMap[modalOpenedFrom]).style.display = 'flex';
+        modalOpenedFrom = null;
+    });
+    document.getElementById('result-title-btn').addEventListener('click', async () => {
+        if (yuetsuEffectPlaying) return;
+        if (pendingYuetsuUnlock) {
+            document.getElementById('result-title-btn').disabled = true;
+            document.getElementById('result-end-btn').disabled   = true;
+            document.getElementById('result-screen').style.display = 'none';
+            await playYuetsuUnlockEffect();
+            document.getElementById('result-title-btn').disabled = false;
+            document.getElementById('result-end-btn').disabled   = false;
+        }
+        goToTitle();
+    });
+    document.getElementById('result-end-btn').addEventListener('click', () => {
+        if (yuetsuEffectPlaying) return;
+        modalOpenedFrom = 'result';
+        document.getElementById('result-screen').style.display = 'none';
+        document.getElementById('end-modal').style.display     = 'flex';
+    });
+    document.getElementById('start-btn').addEventListener('click', startGame);
+    document.getElementById('bgm-yes-btn').addEventListener('click', () => {
+        soundEnabled = true; document.getElementById('bgm-confirm-modal').style.display = 'none'; updateBgmToggleIcon();
+        if (soundEnabled && bgmEnabled && titleBGM) { titleBGM.currentTime = 0; titleBGM.volume = bgmVolume; titleBGM.play().catch(() => {}); }
+        unlockAudioContext();
+    });
+    document.getElementById('bgm-no-btn').addEventListener('click', () => {
+        soundEnabled = false; document.getElementById('bgm-confirm-modal').style.display = 'none'; updateBgmToggleIcon();
+    });
+    document.getElementById('bgm-toggle-btn').addEventListener('click', () => {
+        soundEnabled = !soundEnabled;
+        if (soundEnabled) {
+            if (resultPhaseActive || !bgmEnabled) { updateBgmToggleIcon(); return; }
+            const onTitle = document.getElementById('title-screen').style.display !== 'none';
+            const onGame  = document.getElementById('game-screen').style.display  !== 'none' && !gameOver;
+            if (onTitle) playBGM(titleBGM);
+            else if (onGame) playBGM(cpuStrength === '愉悦' ? yuetsuBGM : bgmAudio);
+            unlockAudioContext();
+        } else { stopAllBGM(); }
+        updateBgmToggleIcon();
+    });
+}
+function updateBgmToggleIcon() { document.getElementById('bgm-toggle-btn').textContent = soundEnabled ? '▶️' : '❌'; }
+
+// ===== ゲーム開始 =====
+function startGame() {
+    initBoard(); cpuColor = 3 - playerColor; currentPlayer = 1;
+    gameOver = false; isFlipping = false; resultPhaseActive = false;
+    stopAllBGM();
+    if (soundEnabled && bgmEnabled) playBGM(cpuStrength === '愉悦' ? yuetsuBGM : bgmAudio);
+    unlockAudioContext();
+    document.getElementById('title-screen').style.display  = 'none';
+    document.getElementById('game-screen').style.display   = 'flex';
+    document.getElementById('result-screen').style.display = 'none';
+    hideWinLoseOverlay();
+    const pSrc = playerColor === 1 ? '黒5.png' : '白7.png';
+    const cpuImgMap = { 'よわい':'easy.png', 'ふつう':'normal.png', 'つよい':'hard.png', '愉悦':'yuetu.png' };
+    const cpuImgSrc = cpuImgMap[cpuStrength] || 'normal.png';
+    ['pc','mobile'].forEach(t => {
+        document.getElementById(`player-char-img-${t}`).innerHTML   = `<img src="${pSrc}" alt="あなたのコマ">`;
+        document.getElementById(`opponent-char-img-${t}`).innerHTML = `<img src="${cpuImgSrc}" alt="CPUキャラクター">`;
+        document.getElementById(`player-label-${t}`).textContent    = `YOU (${playerColor === 1 ? '黒' : '白'})`;
+        document.getElementById(`opponent-label-${t}`).textContent  = `ENEMY (${cpuStrength})`;
+    });
+    const isMobile = window.innerWidth <= 768;
+    document.getElementById('player-info-pc').style.display    = isMobile ? 'none' : 'flex';
+    document.getElementById('opponent-info-pc').style.display  = isMobile ? 'none' : 'flex';
+    document.getElementById('smartphone-top-bar').style.display = isMobile ? 'flex' : 'none';
+    resizeCanvas(); updateStatus();
+    setTimeout(() => { drawBoard(); checkNextTurn(); }, 50);
+}
+function goToTitle() {
+    ['game-screen','result-screen','option-modal','end-modal'].forEach(id => { document.getElementById(id).style.display = 'none'; });
+    hideWinLoseOverlay();
+    document.getElementById('title-screen').style.display = 'flex';
+    stopAllBGM(); resultPhaseActive = false;
+    if (soundEnabled && bgmEnabled && titleBGM) { titleBGM.currentTime = 0; titleBGM.volume = bgmVolume; titleBGM.play().catch(() => {}); }
+    gameOver = true; isFlipping = false;
+    if (yuetsuUnlocked) document.getElementById('yuetsu-btn-wrap').style.display = 'flex';
+}
+function initBoard() {
+    board = createEmptyBoard(); pieceVariant = createEmptyBoard(null);
+    board[3][3] = 2; board[3][4] = 1; board[4][3] = 1; board[4][4] = 2;
+    pieceVariant[3][3] = pickWhiteImg(); pieceVariant[3][4] = pickBlackImg();
+    pieceVariant[4][3] = pickBlackImg(); pieceVariant[4][4] = pickWhiteImg();
+}
+
+// ===== 雪エフェクト =====
+function createSnowflakes() {
+    const bg = document.getElementById('snow-bg');
+    const symbols = ['❄️','❅','❆'];
+    const fragment = document.createDocumentFragment();
+    for (let i = 0; i < 120; i++) {
+        const snow = document.createElement('div');
+        snow.className = 'snowflake-bg';
+        snow.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+        snow.style.left              = Math.random() * 100 + 'vw';
+        snow.style.fontSize          = (Math.random() * 24 + 12) + 'px';
+        snow.style.animationDuration = (Math.random() * 12 + 8) + 's';
+        snow.style.animationDelay    = '-' + Math.random() * 15 + 's';
+        snow.style.opacity           = (Math.random() * 0.6 + 0.4).toString();
+        snow.style.color             = Math.random() > 0.5 ? '#b0e0ff' : '#e0f7ff';
+        fragment.appendChild(snow);
+    }
+    bg.appendChild(fragment);
+}
+
+// ===== YouTube API =====
+async function fetchJSON(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+}
+async function fetchLatestStream() {
+    const ec = document.getElementById('latest-embed'), nm = document.getElementById('no-latest-message');
+    try {
+        const base = 'https://youtube.googleapis.com/youtube/v3';
+        const sd = await fetchJSON(`${base}/search?part=snippet&channelId=${CHANNEL_ID}&eventType=completed&type=video&order=date&maxResults=1&key=${YOUTUBE_API_KEY}`);
+        if (!sd.items?.length) { nm.style.display = 'block'; return; }
+        const vid = sd.items[0].id.videoId, title = sd.items[0].snippet.title;
+        const vd  = await fetchJSON(`${base}/videos?part=liveStreamingDetails,snippet&id=${vid}&key=${YOUTUBE_API_KEY}`);
+        let dt = new Date(sd.items[0].snippet.publishedAt).toLocaleDateString('ja-JP');
+        if (vd.items[0]?.liveStreamingDetails?.actualStartTime)
+            dt = new Date(vd.items[0].liveStreamingDetails.actualStartTime).toLocaleDateString('ja-JP');
+        ec.appendChild(createYouTubeIframe(vid));
+        const p = document.createElement('p'), a = document.createElement('a');
+        a.href = `https://www.youtube.com/watch?v=${vid}`; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = title;
+        p.appendChild(a); p.appendChild(document.createTextNode(` | 配信日: ${dt}`)); ec.appendChild(p);
+    } catch (e) { console.warn('[YouTube] 最新配信の取得に失敗:', e.message); nm.style.display = 'block'; }
+}
+async function fetchUpcomingStream() {
+    const ec = document.getElementById('upcoming-embed'), nm = document.getElementById('no-stream-message');
+    try {
+        const base = 'https://youtube.googleapis.com/youtube/v3';
+        const d = await fetchJSON(`${base}/search?part=snippet&channelId=${CHANNEL_ID}&eventType=upcoming&type=video&order=date&maxResults=10&key=${YOUTUBE_API_KEY}`);
+        if (!d.items?.length) { nm.style.display = 'block'; return; }
+        const ids = d.items.map(i => i.id.videoId).join(',');
+        const vd  = await fetchJSON(`${base}/videos?part=liveStreamingDetails,snippet&id=${ids}&key=${YOUTUBE_API_KEY}`);
+        const now = Date.now(); let cs = null, minDiff = Infinity;
+        for (const item of vd.items) {
+            const t = item.liveStreamingDetails?.scheduledStartTime;
+            const dv = t ? new Date(t).getTime() - now : -1;
+            if (dv > 0 && dv < minDiff) { minDiff = dv; cs = item; }
+        }
+        if (!cs) { nm.style.display = 'block'; return; }
+        ec.appendChild(createYouTubeIframe(cs.id));
+        const p = document.createElement('p'), a = document.createElement('a');
+        a.href = `https://www.youtube.com/watch?v=${cs.id}`; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = cs.snippet.title;
+        p.appendChild(a); p.appendChild(document.createTextNode(` | 予定日時: ${new Date(cs.liveStreamingDetails.scheduledStartTime).toLocaleString('ja-JP')}`));
+        ec.appendChild(p);
+    } catch (e) { console.warn('[YouTube] 次回配信の取得に失敗:', e.message); nm.style.display = 'block'; }
+}
+function createYouTubeIframe(vid) {
+    const iframe = document.createElement('iframe');
+    iframe.src = `https://www.youtube.com/embed/${vid}?autoplay=0`;
+    iframe.width = '100%'; iframe.height = '210'; iframe.frameBorder = '0';
+    iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+    iframe.allowFullscreen = true;
+    return iframe;
+}
+
+// ===== 初期化 =====
+function init() {
+    initBoard(); initAudio(); loadImages();
+    createStrengthSelect(); createColorSelect();
+    setupEvents(); updateSoundToggleButtons();
+    document.getElementById('bgm-confirm-modal').style.display = 'flex';
+    updateBgmToggleIcon(); createSnowflakes(); resizeCanvas();
+    window.addEventListener('resize', () => { ctx.setTransform(1,0,0,1,0,0); resizeCanvas(); });
+    fetchLatestStream(); fetchUpcomingStream();
+}
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
