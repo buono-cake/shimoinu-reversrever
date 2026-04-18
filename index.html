@@ -842,33 +842,19 @@ async function placePiece(r, c, placingColor) {
     const chosenRev = revList[Math.floor(Math.random() * revList.length)];
     const voiceSrc  = (chosenRev && soundEnabled && seEnabled) ? chosenRev.src : null;
 
-    // ボイスを鳴らしながら滑らかにひっくり返す方式
-    //
-    // 各コマを FLIP_INTERVAL_MS(150ms) 間隔でどんどんひっくり返しつつ、
-    // 各コマに対応するボイスも同時に鳴らす。
-    // ボイスが FLIP_INTERVAL_MS より長くても短くても関係なく、
-    // タイマーベースで滑らかに反転する。
-    //
-    // 最後のコマだけは、対応ボイスが最後まで流れるのを待ってから次のターンへ。
-    let lastVoicePromise = Promise.resolve();
-
+    // ひっくり返す + ボイス開始 → ボイス終了 → 次をひっくり返す + ボイス開始 → …
+    // 最後のコマのボイスも最後まで流れてから次のターンへ進む
     for (let i = 0; i < flips.length; i++) {
         const [fr, fc] = flips[i];
 
-        // ボイス再生開始（awaitしない → 次のコマへすぐ進める）
-        lastVoicePromise = playFlipVoiceAndWait(voiceSrc);
-
-        // コマをひっくり返す（ボイスと同時）
+        // コマをひっくり返す
         board[fr][fc] = placingColor;
         pieceVariant[fr][fc] = pickImg(placingColor);
         drawBoard();
 
-        // 次のコマまで固定インターバル待つ（最後のコマは不要）
-        if (i < flips.length - 1) await wait(FLIP_INTERVAL_MS);
+        // ボイス再生開始 → 終わるまで待つ
+        await playFlipVoiceAndWait(voiceSrc);
     }
-
-    // 最後のコマのボイスが終わるまで待ってから次のターンへ
-    await lastVoicePromise;
 
     isFlipping = false;
     currentPlayer = placingColor === 1 ? 2 : 1;
