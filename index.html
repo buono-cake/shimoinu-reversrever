@@ -842,18 +842,23 @@ async function placePiece(r, c, placingColor) {
     const chosenRev = revList[Math.floor(Math.random() * revList.length)];
     const voiceSrc  = (chosenRev && soundEnabled && seEnabled) ? chosenRev.src : null;
 
-    // 「ボイス再生 → 終わったら1枚ひっくり返す」を枚数分繰り返す
-    // 1個のAudio要素を使い回すのでiOSでもブロックされない
+    // 「ボイス再生と同時にひっくり返す、次のコマはボイスが終わってから」
+    // ボイス開始 ─┐
+    // コマ反転   ─┘ 同時
+    //              └─ ボイス終了を待って次へ
     for (let i = 0; i < flips.length; i++) {
         const [fr, fc] = flips[i];
 
-        // ボイスを再生し、終わるまで待つ（SE無効 or 無声なら即resolve）
-        await playFlipVoiceAndWait(voiceSrc);
+        // ボイス再生開始（Promiseを保持するが、まだawaitしない）
+        const voicePromise = playFlipVoiceAndWait(voiceSrc);
 
-        // ボイスが終わってからコマをひっくり返す
+        // ボイスと同時にコマをひっくり返す
         board[fr][fc] = placingColor;
         pieceVariant[fr][fc] = pickImg(placingColor);
         drawBoard();
+
+        // ボイスが終わるのを待ってから次のコマへ
+        await voicePromise;
 
         // 次のボイス開始まで少し間を空ける
         if (i < flips.length - 1) await wait(FLIP_INTERVAL_MS);
