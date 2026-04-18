@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="keywords" content="しもいぬ,しもいぬれいな,しもいぬりばーし,しもいぬれいなりばーし,霜戌,霜戌レイナ,霜戌リバーシ,霜戌レイナリバーシ,愉悦リバーシ,Vtuber,vtuber">
+    <meta name="keywords" content="しもいぬ,しもいぬれいな,しもいぬりばーし,しもいぬれいなりばーし,霜戌,霜戌レイナ,霜戌リバーシ,霜戌レイナリバーシ,愉悦リバーシ,Vtube">
     <meta name="description" content="自称清楚系犬っ娘Vtuber、霜戌レイナさんの黒と白が等価値のリバーシです">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="google-site-verification" content="folKrjMLCPM3qBZbfTvi-e0H5GqpQN9gpashNGlJIpw" />
@@ -23,7 +23,6 @@
 
         body {
             font-family: 'Noto Sans JP', sans-serif;
-            /* FIX: 上部の緑帯 → bodyのbgをsnow-backgroundと同じ色に合わせる */
             background: linear-gradient(135deg, #e0f7ff, #b0e0ff);
             color: #fff;
             height: 100vh; width: 100vw;
@@ -361,7 +360,7 @@
         @keyframes yuetsuZoomIn { 0% { transform: scale(0.08); opacity: 0; } 40% { opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
         #yuetsu-overlay.fadeout { opacity: 0; pointer-events: none; }
 
-        /* ===== FIX: 結果発表タップ待ち画面 ===== */
+        /* ===== 結果発表タップ待ち画面 ===== */
         #score-tap-overlay {
             position: fixed; inset: 0;
             display: none;
@@ -516,7 +515,7 @@
         <div id="yuetsu-overlay-text" style="font-size:clamp(3rem,12vw,7rem);">† 愉悦 †</div>
     </div>
 
-    <!-- FIX: 結果発表タップ待ちオーバーレイ -->
+    <!--  結果発表タップ待ちオーバーレイ -->
     <div id="score-tap-overlay" aria-live="polite">
         <div class="tap-title">結果発表！！</div>
         <div class="tap-hint">画面をタップしてね ▽</div>
@@ -571,7 +570,7 @@
 const BOARD_SIZE         = 8;
 const CELL_PADDING_RATIO = 0.42;
 const SPECIAL_PROB       = 1 / 1017;
-const FLIP_INTERVAL_MS   = 150; // コマをひっくり返す間隔(ms)。ボイスの長さに合わせて調整
+const FLIP_INTERVAL_MS   = 150; 
 const CPU_THINK_DELAY_MS = 800;
 const DIRECTIONS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
 const POSITION_WEIGHT = [
@@ -636,7 +635,6 @@ function createEmptyBoard(fill = 0) {
 function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ===== タップ待ちPromise =====
-// FIX: スマホの音声制限対策。ユーザーのタップを挟んでからSEを鳴らす
 function waitForTap(overlayId) {
     return new Promise(resolve => {
         const el = document.getElementById(overlayId);
@@ -715,9 +713,6 @@ async function unlockAudioContext() {
 }
 
 // ===== 音声再生 =====
-// iOSは「ユーザー操作から生まれた play() コンテキスト」しか信用しない。
-// new Audio() を毎回作ると新しいコンテキストが必要になりブロックされる。
-// → 1個のAudio要素を使い回して src だけ切り替えることで回避する。
 let _flipAudioElem = null;
 
 function getFlipAudioElem() {
@@ -728,8 +723,6 @@ function getFlipAudioElem() {
     return _flipAudioElem;
 }
 
-// 1枚分のボイスを再生し、終わったら（またはタイムアウトしたら）resolveするPromiseを返す
-// VOICE_MAX_MS: ボイスが長くても待ちすぎないための上限（ms）
 const VOICE_MAX_MS = 3500;
 
 function playFlipVoiceAndWait(audioSrc) {
@@ -741,7 +734,7 @@ function playFlipVoiceAndWait(audioSrc) {
         let settled = false;
         const finish = () => { if (!settled) { settled = true; resolve(); } };
 
-        // タイムアウト保険（ボイスが鳴らなかった場合もちゃんと進む）
+        // タイムアウト処理
         const timer = setTimeout(finish, VOICE_MAX_MS);
 
         elem.onended = () => { clearTimeout(timer); finish(); };
@@ -869,7 +862,6 @@ async function placePiece(r, c, placingColor) {
     const chosenRev = revList[Math.floor(Math.random() * revList.length)];
     const voiceSrc  = (chosenRev && soundEnabled && seEnabled) ? chosenRev.src : null;
 
-    // ひっくり返す + ボイス開始 → ボイス終了 → 次をひっくり返す + ボイス開始 → …
     // 最後のコマのボイスも最後まで流れてから次のターンへ進む
     for (let i = 0; i < flips.length; i++) {
         const [fr, fc] = flips[i];
@@ -995,12 +987,9 @@ function endGame() {
 
 async function runScoreAndResultSequence() {
     board = createEmptyBoard(); pieceVariant = createEmptyBoard(null); drawBoard();
-
-    // FIX: タップ待ち画面を表示してユーザー操作を挟む
-    // → これによりiOSの音声ロックが解除され、drum_rool と勝敗SEが確実に再生される
+    
     await waitForTap('score-tap-overlay');
 
-    // タップ後にdrum_rool再生（ユーザー操作直後なので確実に再生できる）
     let drumPromise = Promise.resolve();
     if (soundEnabled && seEnabled && drumRoalAudio) drumPromise = playSoundAndWait(drumRoalAudio, 8000);
 
@@ -1040,8 +1029,6 @@ async function showWinLoseOverlayAndProceed() {
     const isWin = pf > cf, isDraw = pf === cf;
     showWinLoseOverlay(isWin ? 'win' : isDraw ? 'draw' : 'lose');
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-    // FIX: タップ直後のユーザー操作コンテキストが残っているので
-    //      勝敗SEもここで確実に再生される
     if (!soundEnabled || !seEnabled) {
         await wait(2000);
     } else if (isWin) {
