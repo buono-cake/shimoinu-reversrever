@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="keywords" content="しもいぬ,しもいぬれいな,しもいぬりばーし,しもいぬれいなりばーし,霜戌,霜戌レイナ,霜戌リバーシ,霜戌レイナリバーシ,愉悦リバーシ,Vtuber,vtuber">
-　　<meta name="description" content="自称清楚系犬っ娘Vtuber、霜戌レイナさんの黒と白が等価値のリバーシです">　
+    <meta name="description" content="自称清楚系犬っ娘Vtuber、霜戌レイナさんの黒と白が等価値のリバーシです">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="google-site-verification" content="folKrjMLCPM3qBZbfTvi-e0H5GqpQN9gpashNGlJIpw" />
-
     <title>霜戌レイナリバーシ</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
@@ -24,7 +23,8 @@
 
         body {
             font-family: 'Noto Sans JP', sans-serif;
-            background: var(--body-bg);
+            /* FIX: 上部の緑帯 → bodyのbgをsnow-backgroundと同じ色に合わせる */
+            background: linear-gradient(135deg, #e0f7ff, #b0e0ff);
             color: #fff;
             height: 100vh; width: 100vw;
             overflow: hidden;
@@ -346,6 +346,39 @@
         #yuetsu-overlay-text { font-family: 'Noto Sans JP', sans-serif; font-weight: 900; color: #ff4500; text-shadow: 0 0 40px #ff4500, 0 0 80px #ff0000, 0 0 120px #ff6600; text-align: center; animation: yuetsuZoomIn 1.4s cubic-bezier(0.16,1,0.3,1) both; }
         @keyframes yuetsuZoomIn { 0% { transform: scale(0.08); opacity: 0; } 40% { opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
         #yuetsu-overlay.fadeout { opacity: 0; pointer-events: none; }
+
+        /* ===== FIX: 結果発表タップ待ち画面 ===== */
+        #score-tap-overlay {
+            position: fixed; inset: 0;
+            display: none;
+            align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.62);
+            z-index: 88888;
+            flex-direction: column;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #score-tap-overlay .tap-title {
+            font-size: clamp(2.8rem, 10vw, 5rem);
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 0 30px var(--accent), 0 4px 18px rgba(0,0,0,0.7);
+            letter-spacing: 4px;
+            animation: tapPulse 1.2s ease-in-out infinite alternate;
+        }
+        #score-tap-overlay .tap-hint {
+            margin-top: 18px;
+            font-size: clamp(1.1rem, 3.5vw, 1.6rem);
+            color: rgba(255,255,255,0.85);
+            font-weight: 700;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+            animation: tapPulse 1.2s ease-in-out infinite alternate;
+            animation-delay: 0.15s;
+        }
+        @keyframes tapPulse {
+            from { opacity: 0.6; transform: scale(0.97); }
+            to   { opacity: 1.0; transform: scale(1.03); }
+        }
     </style>
 </head>
 <body>
@@ -454,6 +487,12 @@
     <!-- 愉悦アンロック演出 -->
     <div id="yuetsu-overlay" aria-hidden="true">
         <div id="yuetsu-overlay-text" style="font-size:clamp(3rem,12vw,7rem);">† 愉悦 †</div>
+    </div>
+
+    <!-- FIX: 結果発表タップ待ちオーバーレイ -->
+    <div id="score-tap-overlay" aria-live="polite">
+        <div class="tap-title">結果発表！！</div>
+        <div class="tap-hint">画面をタップしてね ▽</div>
     </div>
 
     <!-- オプションポップアップ -->
@@ -569,6 +608,23 @@ function createEmptyBoard(fill = 0) {
 }
 function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+// ===== タップ待ちPromise =====
+// FIX: スマホの音声制限対策。ユーザーのタップを挟んでからSEを鳴らす
+function waitForTap(overlayId) {
+    return new Promise(resolve => {
+        const el = document.getElementById(overlayId);
+        el.style.display = 'flex';
+        const handler = () => {
+            el.style.display = 'none';
+            el.removeEventListener('click',     handler);
+            el.removeEventListener('touchstart', handler);
+            resolve();
+        };
+        el.addEventListener('click',     handler, { once: true });
+        el.addEventListener('touchstart', handler, { once: true, passive: true });
+    });
+}
+
 // ===== 画像ロード =====
 function loadImages() {
     blackPieceImgs = [];
@@ -629,6 +685,30 @@ async function unlockAudioContext() {
         g.gain.value = 0; osc.connect(g); g.connect(ac.destination);
         osc.start(0); osc.stop(0.001);
     } catch (_) {}
+}
+
+// ===== 音声再生 =====
+// FIX: スマホの同時再生制限対策
+// 反転ボイスは「1手につき1声」をAudio要素を使い回すことで確実に再生
+// src を切り替えて play() することでiOS制限を回避する
+let _flipAudioElem = null; // 反転ボイス用使い回しAudio要素
+
+function getFlipAudioElem() {
+    if (!_flipAudioElem) {
+        _flipAudioElem = new Audio();
+        _flipAudioElem.volume = voiceVolume;
+    }
+    return _flipAudioElem;
+}
+
+function playFlipVoice(audio) {
+    if (!soundEnabled || !seEnabled || !audio) return;
+    const elem = getFlipAudioElem();
+    // 前の再生を停止してから切り替え
+    try { elem.pause(); elem.currentTime = 0; } catch(_) {}
+    elem.src    = audio.src;
+    elem.volume = voiceVolume;
+    elem.play().catch(() => {});
 }
 
 function playSound(audio) {
@@ -740,22 +820,26 @@ async function placePiece(r, c, placingColor) {
     isFlipping = true;
     board[r][c] = placingColor; pieceVariant[r][c] = pickImg(placingColor);
     drawBoard();
-    const revList  = placingColor === playerColor ? reversePlayerSounds : reverseCpuSounds;
+
+    // FIX: 反転ボイスは1手につき1回、先頭でまとめて再生
+    // （コマをひっくり返すループの中で毎回new Audioしていたのを廃止）
+    const revList   = placingColor === playerColor ? reversePlayerSounds : reverseCpuSounds;
     const chosenRev = revList[Math.floor(Math.random() * revList.length)];
+    playFlipVoice(chosenRev);
+
+    // コマを順番にひっくり返す（音声なし、アニメのみ）
     for (let i = 0; i < flips.length; i++) {
         const [fr, fc] = flips[i];
         await new Promise(resolve => {
             setTimeout(() => {
-                board[fr][fc] = placingColor; pieceVariant[fr][fc] = pickImg(placingColor); drawBoard();
-                if (chosenRev && soundEnabled && seEnabled) {
-                    const a = new Audio(chosenRev.src); a.volume = voiceVolume;
-                    let resolved = false;
-                    const done = () => { if (!resolved) { resolved = true; resolve(); } };
-                    a.onended = done; a.onerror = done; a.play().catch(done); setTimeout(done, 3000);
-                } else { resolve(); }
+                board[fr][fc] = placingColor;
+                pieceVariant[fr][fc] = pickImg(placingColor);
+                drawBoard();
+                resolve();
             }, i * FLIP_INTERVAL_MS);
         });
     }
+
     isFlipping = false;
     currentPlayer = placingColor === 1 ? 2 : 1;
     updateStatus(); drawBoard();
@@ -862,13 +946,21 @@ function endGame() {
         if (board[r][c] === 1) black++; else if (board[r][c] === 2) white++;
     }
     finalBlackCount = black; finalWhiteCount = white;
-    document.getElementById('status-bar').innerHTML = '最終スコアを並べています…';
+    document.getElementById('status-bar').innerHTML = '最終スコアを集計中…';
     setTimeout(() => runScoreAndResultSequence(), 800);
 }
+
 async function runScoreAndResultSequence() {
     board = createEmptyBoard(); pieceVariant = createEmptyBoard(null); drawBoard();
+
+    // FIX: タップ待ち画面を表示してユーザー操作を挟む
+    // → これによりiOSの音声ロックが解除され、drum_rool と勝敗SEが確実に再生される
+    await waitForTap('score-tap-overlay');
+
+    // タップ後にdrum_rool再生（ユーザー操作直後なので確実に再生できる）
     let drumPromise = Promise.resolve();
     if (soundEnabled && seEnabled && drumRoalAudio) drumPromise = playSoundAndWait(drumRoalAudio, 8000);
+
     const total = finalBlackCount + finalWhiteCount;
     const interval = total > 0 ? 3000 / total : 35;
     let bp = 0, wp = 0;
@@ -892,17 +984,21 @@ async function runScoreAndResultSequence() {
         placeNext();
     });
     await drumPromise;
+
     const pf = playerColor === 1 ? finalBlackCount : finalWhiteCount;
     const cf = playerColor === 1 ? finalWhiteCount  : finalBlackCount;
     if (!yuetsuUnlocked && cpuStrength === 'つよい' && pf > cf) pendingYuetsuUnlock = true;
     showWinLoseOverlayAndProceed();
 }
+
 async function showWinLoseOverlayAndProceed() {
     const pf = playerColor === 1 ? finalBlackCount : finalWhiteCount;
     const cf = playerColor === 1 ? finalWhiteCount  : finalBlackCount;
     const isWin = pf > cf, isDraw = pf === cf;
     showWinLoseOverlay(isWin ? 'win' : isDraw ? 'draw' : 'lose');
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    // FIX: タップ直後のユーザー操作コンテキストが残っているので
+    //      勝敗SEもここで確実に再生される
     if (!soundEnabled || !seEnabled) {
         await wait(2000);
     } else if (isWin) {
@@ -914,6 +1010,7 @@ async function showWinLoseOverlayAndProceed() {
     }
     setTimeout(showResultScreen, 300);
 }
+
 function showWinLoseOverlay(type) {
     const o = document.getElementById('win-lose-overlay');
     document.getElementById('win-lose-image').src = type === 'win' ? 'win.png' : type === 'lose' ? 'lose.png' : 'draw.png';
@@ -1071,6 +1168,7 @@ function applyVolumeToAll() {
     [...reversePlayerSounds, ...reverseCpuSounds, winSeAudio, winSAudio, clapAudio, loseSeAudio, loseSakebiAudio, drumRoalAudio, drawSeAudio, drawVoiceAudio, ...winResultSoundsArray, ...loseResultSoundsArray, drawResultAudio]
         .forEach(a => { if (a) a.volume = voiceVolume; });
     [bgmAudio, titleBGM, yuetsuBGM, yuetsuUnlockBGM].forEach(a => { if (a) a.volume = bgmVolume; });
+    if (_flipAudioElem) _flipAudioElem.volume = voiceVolume;
 }
 function setupSlider(slider) {
     let dragging = false;
