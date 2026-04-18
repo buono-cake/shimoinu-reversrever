@@ -688,10 +688,10 @@ async function unlockAudioContext() {
 }
 
 // ===== 音声再生 =====
-// FIX: スマホの同時再生制限対策
-// 反転ボイスは「1手につき1声」をAudio要素を使い回すことで確実に再生
-// src を切り替えて play() することでiOS制限を回避する
-let _flipAudioElem = null; // 反転ボイス用使い回しAudio要素
+// iOSは「ユーザー操作から生まれた play() コンテキスト」しか信用しない。
+// new Audio() を毎回作ると新しいコンテキストが必要になりブロックされる。
+// → 1個のAudio要素を使い回して src だけ切り替えることで回避する。
+let _flipAudioElem = null;
 
 function getFlipAudioElem() {
     if (!_flipAudioElem) {
@@ -701,14 +701,28 @@ function getFlipAudioElem() {
     return _flipAudioElem;
 }
 
-function playFlipVoice(audio) {
-    if (!soundEnabled || !seEnabled || !audio) return;
-    const elem = getFlipAudioElem();
-    // 前の再生を停止してから切り替え
-    try { elem.pause(); elem.currentTime = 0; } catch(_) {}
-    elem.src    = audio.src;
-    elem.volume = voiceVolume;
-    elem.play().catch(() => {});
+// 1枚分のボイスを再生し、終わったら（またはタイムアウトしたら）resolveするPromiseを返す
+// VOICE_MAX_MS: ボイスが長くても待ちすぎないための上限（ms）
+const VOICE_MAX_MS = 3500;
+
+function playFlipVoiceAndWait(audioSrc) {
+    return new Promise(resolve => {
+        if (!soundEnabled || !seEnabled || !audioSrc) { resolve(); return; }
+        const elem = getFlipAudioElem();
+        try { elem.pause(); elem.currentTime = 0; } catch(_) {}
+
+        let settled = false;
+        const finish = () => { if (!settled) { settled = true; resolve(); } };
+
+        // タイムアウト保険（ボイスが鳴らなかった場合もちゃんと進む）
+        const timer = setTimeout(finish, VOICE_MAX_MS);
+
+        elem.onended = () => { clearTimeout(timer); finish(); };
+        elem.onerror = () => { clearTimeout(timer); finish(); };
+        elem.src    = audioSrc;
+        elem.volume = voiceVolume;
+        elem.play().catch(() => { clearTimeout(timer); finish(); });
+    });
 }
 
 function playSound(audio) {
@@ -818,26 +832,31 @@ async function placePiece(r, c, placingColor) {
     const flips = getFlips(r, c, placingColor);
     if (!flips.length) return;
     isFlipping = true;
+
+    // 置いたコマを表示
     board[r][c] = placingColor; pieceVariant[r][c] = pickImg(placingColor);
     drawBoard();
 
-    // FIX: 反転ボイスは1手につき1回、先頭でまとめて再生
-    // （コマをひっくり返すループの中で毎回new Audioしていたのを廃止）
+    // 使うボイスを1手につき1種類選んでおく
     const revList   = placingColor === playerColor ? reversePlayerSounds : reverseCpuSounds;
     const chosenRev = revList[Math.floor(Math.random() * revList.length)];
-    playFlipVoice(chosenRev);
+    const voiceSrc  = (chosenRev && soundEnabled && seEnabled) ? chosenRev.src : null;
 
-    // コマを順番にひっくり返す（音声なし、アニメのみ）
+    // 「ボイス再生 → 終わったら1枚ひっくり返す」を枚数分繰り返す
+    // 1個のAudio要素を使い回すのでiOSでもブロックされない
     for (let i = 0; i < flips.length; i++) {
         const [fr, fc] = flips[i];
-        await new Promise(resolve => {
-            setTimeout(() => {
-                board[fr][fc] = placingColor;
-                pieceVariant[fr][fc] = pickImg(placingColor);
-                drawBoard();
-                resolve();
-            }, i * FLIP_INTERVAL_MS);
-        });
+
+        // ボイスを再生し、終わるまで待つ（SE無効 or 無声なら即resolve）
+        await playFlipVoiceAndWait(voiceSrc);
+
+        // ボイスが終わってからコマをひっくり返す
+        board[fr][fc] = placingColor;
+        pieceVariant[fr][fc] = pickImg(placingColor);
+        drawBoard();
+
+        // 次のボイス開始まで少し間を空ける
+        if (i < flips.length - 1) await wait(FLIP_INTERVAL_MS);
     }
 
     isFlipping = false;
