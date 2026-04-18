@@ -134,6 +134,15 @@
             #title-scroll-area { width: 100% !important; padding: 4px 12px 24px !important; flex-shrink: 0 !important; }
             .main-title { font-size: clamp(2.2rem, 9vw, 3.5rem) !important; letter-spacing: 4px !important; }
             .subtitle   { font-size: clamp(0.85rem, 3.2vw, 1.1rem) !important; }
+            /* スマホ: PC行を隠してSP行2行を表示 */
+            .title-pc-line  { display: none !important; }
+            .title-sp-line1 { display: block !important; line-height: 1.15 !important; }
+            .title-sp-line2 {
+                display: block !important;
+                line-height: 1.15 !important;
+                font-size: clamp(2.8rem, 12vw, 4.5rem) !important;
+                letter-spacing: 2px !important;
+            }
             .title-label { text-align: center !important; width: 100% !important; }
             .strength-select { gap: 10px !important; margin: 6px 0 !important; }
             .strength-btn {
@@ -256,6 +265,11 @@
         }
         .main-title span.symbol { color: #ff69b4; }
         .main-title span.text   { color: var(--accent); }
+
+        /* タイトル行 PC/スマホ切り替え */
+        .title-pc-line  { display: inline; }
+        .title-sp-line1 { display: none; }
+        .title-sp-line2 { display: none; }
         .subtitle {
             font-size: clamp(1.5rem, 3.5vw, 2.3rem);
             font-weight: 700; color: transparent;
@@ -393,7 +407,20 @@
         </div>
         <div id="title-fixed-area">
             <div class="title" style="text-align:center;margin-bottom:4px;">
-                <span class="main-title"><span class="symbol">†</span><span class="text">霜戌レイナRE:VERSI</span><span class="symbol">†</span></span><br>
+                <!-- PC: †霜戌レイナRE:VERSI† ／ スマホ: †霜戌レイナ† + RE:VERSI で2行 -->
+                <span class="main-title">
+                    <!-- PC表示用（スマホでは非表示） -->
+                    <span class="title-pc-line">
+                        <span class="symbol">†</span><span class="text">霜戌レイナRE:VERSI</span><span class="symbol">†</span>
+                    </span>
+                    <!-- スマホ表示用（PCでは非表示） -->
+                    <span class="title-sp-line1">
+                        <span class="text">霜戌レイナ</span>
+                    </span>
+                    <span class="title-sp-line2">
+                        <span class="symbol">†</span><span class="text">RE:VERSI</span><span class="symbol">†</span>
+                    </span>
+                </span><br>
                 <span class="subtitle" id="subtitle-text">【表裏】～生と死は等価値～【一体】</span>
             </div>
             <p class="title-label" style="font-size:1.1rem;margin:4px 0 8px;">CPU対戦</p>
