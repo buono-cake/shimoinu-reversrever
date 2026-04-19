@@ -361,9 +361,7 @@
         @keyframes yuetsuZoomIn { 0% { transform: scale(0.08); opacity: 0; } 40% { opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
         #yuetsu-overlay.fadeout { opacity: 0; pointer-events: none; }
 
-        /* ===== Nintendo Switch 専用スタイル =====
-           .is-switch クラスが <html> に付与されている場合のみ適用。
-           PC・スマホのメディアクエリには一切触れない。          */
+        /* ===== Nintendo Switch 専用スタイル =====　*/
 
         /* タイトル画面：PC版と同じ横並びレイアウト */
         .is-switch #title-screen {
@@ -676,8 +674,6 @@
 'use strict';
 
 // ===== Nintendo Switch 判定 =====
-// UA に "Nintendo Switch" が含まれる場合だけ true
-// PC・スマホの挙動は一切変えない
 const isSwitch = /Nintendo Switch/i.test(navigator.userAgent);
 if (isSwitch) document.documentElement.classList.add('is-switch');
 
@@ -829,9 +825,6 @@ async function unlockAudioContext() {
 }
 
 // ===== 音声再生 =====
-// iOSは「ユーザー操作から生まれた play() コンテキスト」しか信用しない。
-// new Audio() を毎回作ると新しいコンテキストが必要になりブロックされる。
-// → 1個のAudio要素を使い回して src だけ切り替えることで回避する。
 let _flipAudioElem = null;
 
 function getFlipAudioElem() {
@@ -842,8 +835,6 @@ function getFlipAudioElem() {
     return _flipAudioElem;
 }
 
-// 1枚分のボイスを再生し、終わったら（またはタイムアウトしたら）resolveするPromiseを返す
-// VOICE_MAX_MS: ボイスが長くても待ちすぎないための上限（ms）
 const VOICE_MAX_MS = 3500;
 
 function playFlipVoiceAndWait(audioSrc) {
@@ -855,7 +846,7 @@ function playFlipVoiceAndWait(audioSrc) {
         let settled = false;
         const finish = () => { if (!settled) { settled = true; resolve(); } };
 
-        // タイムアウト保険（ボイスが鳴らなかった場合もちゃんと進む）
+        // タイムアウト保険
         const timer = setTimeout(finish, VOICE_MAX_MS);
 
         elem.onended = () => { clearTimeout(timer); finish(); };
@@ -1572,10 +1563,8 @@ function init() {
 }
 window.addEventListener('load', init);
 
-// ===================================================
 // Nintendo Switch 専用：Joy-Con Gamepad 操作
-// PC・スマホでは isSwitch=false なので一切動かない
-// ===================================================
+
 if (isSwitch) {
     const cursor = document.getElementById('switch-cursor');
 
@@ -1609,7 +1598,7 @@ if (isSwitch) {
         const el = document.elementFromPoint(x, y);
         cursor.style.display = 'block';
         if (!el) return;
-        // touchstart → touchend → click の順に発火（各種リスナーに対応）
+        // touchstart → touchend → click の順に発火
         const touchObj = new Touch({ identifier: Date.now(), target: el, clientX: x, clientY: y, radiusX: 1, radiusY: 1, rotationAngle: 0, force: 1 });
         try {
             el.dispatchEvent(new TouchEvent('touchstart', { touches: [touchObj], changedTouches: [touchObj], bubbles: true, cancelable: true }));
