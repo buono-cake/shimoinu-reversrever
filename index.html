@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="keywords" content="しもいぬ,しもいぬれいな,しもいぬりばーし,しもいぬれいなりばーし,霜戌,霜戌レイナ,霜戌リバーシ,霜戌レイナリバーシ,愉悦リバーシ,Vtuber,vtuber">
+    <meta name="keywords" content="しもいぬ,しもいぬれいな,しもいぬりばーし,しもいぬれいなりばーし,霜戌,霜戌レイナ,霜戌リバーシ,霜戌レイナリバーシ,愉悦リバーシ,Vtube">
     <meta name="description" content="自称清楚系犬っ娘Vtuber、霜戌レイナさんの黒と白が等価値のリバーシです">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="google-site-verification" content="folKrjMLCPM3qBZbfTvi-e0H5GqpQN9gpashNGlJIpw" />
@@ -23,7 +23,6 @@
 
         body {
             font-family: 'Noto Sans JP', sans-serif;
-            /* FIX: 上部の緑帯 → bodyのbgをsnow-backgroundと同じ色に合わせる */
             background: linear-gradient(135deg, #e0f7ff, #b0e0ff);
             color: #fff;
             height: 100vh; width: 100vw;
@@ -361,110 +360,7 @@
         @keyframes yuetsuZoomIn { 0% { transform: scale(0.08); opacity: 0; } 40% { opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
         #yuetsu-overlay.fadeout { opacity: 0; pointer-events: none; }
 
-        /* ===== Nintendo Switch 専用スタイル =====　*/
-
-        /* タイトル画面：PC版と同じ横並びレイアウト */
-        .is-switch #title-screen {
-            justify-content: flex-start !important;
-            align-items: center !important;
-            overflow-y: auto !important;
-            padding: 10px 0 !important;
-        }
-        .is-switch #title-fixed-area,
-        .is-switch #title-scroll-area {
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            width: 100% !important;
-        }
-        /* タイトル文字はスイッチ画面幅(1280px)に収まるサイズ */
-        .is-switch .main-title { font-size: clamp(2.4rem, 4vw, 5rem) !important; }
-        .is-switch .strength-btn {
-            width: clamp(110px, 14vw,150px) !important;
-            height: clamp(110px, 14vw,150px) !important;
-            font-size: clamp(0.9rem, 1.4vw, 1.1rem) !important;
-            padding: 6px !important;
-        }
-        .is-switch .strength-btn img { width: clamp(72px,10vw,108px) !important; height: clamp(72px,10vw,108px) !important; }
-        .is-switch .start-btn { margin: 8px 0 18px !important; }
-        .is-switch .strength-select { margin: 10px 0 !important; }
-        .is-switch #winner-char-img {
-            width: min(50vmin, 480px) !important;
-            height: min(50vmin, 480px) !important;
-            aspect-ratio: 1/1 !important;
-            border-radius: 50% !important;
-        }
-        /* スイッチではスマホ用トグルボタンを非表示 */
-        .is-switch #se-toggle-btn,
-        .is-switch #bgm-toggle-option-btn { display: none !important; }
-
-        /* スマホ専用タイトル行をスイッチでは非表示（PC行を使う） */
-        .is-switch .title-sp-line1 { display: none !important; }
-        .is-switch .title-sp-line2 { display: none !important; }
-        .is-switch .title-pc-line  { display: inline !important; }
-
-        /* ゲーム画面：PC版と同じ横3ペインレイアウト */
-        .is-switch .game-content {
-            flex-direction: row !important;
-            padding: 0 !important;
-            gap: 0 !important;
-            justify-content: space-between !important;
-            align-items: center !important;
-        }
-        .is-switch .player-info  { order: 1; flex: 1; display: flex !important; justify-content: center; align-items: center; }
-        .is-switch #board-container {
-            order: 2; flex: 0 0 auto;
-            /* スイッチ1080p/720p両対応のボードサイズ */
-            width: min(68vmin, 700px) !important;
-            height: min(68vmin, 700px) !important;
-            margin: 0 auto !important;
-            border-width: 14px !important;
-            padding: 14px !important;
-        }
-        .is-switch .opponent-info { order: 3; flex: 1; display: flex !important; justify-content: center; align-items: center; }
-        .is-switch .char-img {
-            width: min(28vmin, 300px) !important;
-            height: min(28vmin, 300px) !important;
-            aspect-ratio: 1/1 !important;
-        }
-        /* スイッチではスマホ用topバーを非表示 */
-        .is-switch #smartphone-top-bar { display: none !important; }
-        /* スイッチではPC用サイドパネルを表示 */
-        .is-switch #player-info-pc   { display: flex !important; }
-        .is-switch #opponent-info-pc { display: flex !important; }
-        /* ステータスバーは下部固定 */
-        .is-switch .status-bar {
-            position: fixed !important;
-            bottom: 0 !important; left: 0 !important; right: 0 !important;
-            font-size: clamp(1.1rem, 2.5vw, 1.5rem) !important;
-            padding: 14px !important;
-            z-index: 20 !important;
-        }
-        /* オプションボタンサイズ調整 */
-        .is-switch #option-btn {
-            width: 54px !important; height: 54px !important;
-            font-size: 1.6rem !important;
-            top: 14px !important; left: 14px !important;
-        }
-
-        /* Joy-Con カーソル */
-        #switch-cursor {
-            position: fixed;
-            width: 28px; height: 28px;
-            background: rgba(255,215,0,0.85);
-            border: 3px solid #fff;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 999990;
-            display: none;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            transition: background 0.1s;
-        }
-        #switch-cursor.pressing { background: rgba(0,191,255,0.95); }
-        .is-switch #switch-cursor { display: block; }
-
-        /* ===== FIX: 結果発表タップ待ち画面 ===== */
+        /* ===== 結果発表タップ待ち画面 ===== */
         #score-tap-overlay {
             position: fixed; inset: 0;
             display: none;
@@ -501,9 +397,6 @@
 <body>
 
 <div id="app-wrapper">
-    <!-- Nintendo Switch Joy-Con カーソル（スイッチ以外では非表示） -->
-    <div id="switch-cursor" aria-hidden="true"></div>
-
     <div class="snow-background" id="snow-bg"></div>
 
     <!-- タイトル画面 -->
@@ -622,7 +515,7 @@
         <div id="yuetsu-overlay-text" style="font-size:clamp(3rem,12vw,7rem);">† 愉悦 †</div>
     </div>
 
-    <!-- FIX: 結果発表タップ待ちオーバーレイ -->
+    <!--  結果発表タップ待ちオーバーレイ -->
     <div id="score-tap-overlay" aria-live="polite">
         <div class="tap-title">結果発表！！</div>
         <div class="tap-hint">画面をタップしてね ▽</div>
@@ -673,15 +566,11 @@
 <script>
 'use strict';
 
-// ===== Nintendo Switch 判定 =====
-const isSwitch = /Nintendo Switch/i.test(navigator.userAgent);
-if (isSwitch) document.documentElement.classList.add('is-switch');
-
 // ===== 定数 =====
 const BOARD_SIZE         = 8;
 const CELL_PADDING_RATIO = 0.42;
 const SPECIAL_PROB       = 1 / 1017;
-const FLIP_INTERVAL_MS   = 150; // コマをひっくり返す間隔(ms)。ボイスの長さに合わせて調整
+const FLIP_INTERVAL_MS   = 150; 
 const CPU_THINK_DELAY_MS = 800;
 const DIRECTIONS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
 const POSITION_WEIGHT = [
@@ -746,7 +635,6 @@ function createEmptyBoard(fill = 0) {
 function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ===== タップ待ちPromise =====
-// FIX: スマホの音声制限対策。ユーザーのタップを挟んでからSEを鳴らす
 function waitForTap(overlayId) {
     return new Promise(resolve => {
         const el = document.getElementById(overlayId);
@@ -846,7 +734,7 @@ function playFlipVoiceAndWait(audioSrc) {
         let settled = false;
         const finish = () => { if (!settled) { settled = true; resolve(); } };
 
-        // タイムアウト保険
+        // タイムアウト処理
         const timer = setTimeout(finish, VOICE_MAX_MS);
 
         elem.onended = () => { clearTimeout(timer); finish(); };
@@ -974,7 +862,6 @@ async function placePiece(r, c, placingColor) {
     const chosenRev = revList[Math.floor(Math.random() * revList.length)];
     const voiceSrc  = (chosenRev && soundEnabled && seEnabled) ? chosenRev.src : null;
 
-    // ひっくり返す + ボイス開始 → ボイス終了 → 次をひっくり返す + ボイス開始 → …
     // 最後のコマのボイスも最後まで流れてから次のターンへ進む
     for (let i = 0; i < flips.length; i++) {
         const [fr, fc] = flips[i];
@@ -1100,12 +987,9 @@ function endGame() {
 
 async function runScoreAndResultSequence() {
     board = createEmptyBoard(); pieceVariant = createEmptyBoard(null); drawBoard();
-
-    // FIX: タップ待ち画面を表示してユーザー操作を挟む
-    // → これによりiOSの音声ロックが解除され、drum_rool と勝敗SEが確実に再生される
+    
     await waitForTap('score-tap-overlay');
 
-    // タップ後にdrum_rool再生（ユーザー操作直後なので確実に再生できる）
     let drumPromise = Promise.resolve();
     if (soundEnabled && seEnabled && drumRoalAudio) drumPromise = playSoundAndWait(drumRoalAudio, 8000);
 
@@ -1145,8 +1029,6 @@ async function showWinLoseOverlayAndProceed() {
     const isWin = pf > cf, isDraw = pf === cf;
     showWinLoseOverlay(isWin ? 'win' : isDraw ? 'draw' : 'lose');
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-    // FIX: タップ直後のユーザー操作コンテキストが残っているので
-    //      勝敗SEもここで確実に再生される
     if (!soundEnabled || !seEnabled) {
         await wait(2000);
     } else if (isWin) {
@@ -1452,9 +1334,7 @@ function startGame() {
         document.getElementById(`player-label-${t}`).textContent    = `YOU (${playerColor === 1 ? '黒' : '白'})`;
         document.getElementById(`opponent-label-${t}`).textContent  = `ENEMY (${cpuStrength})`;
     });
-    // スイッチはPC版レイアウト（CSSの.is-switchで制御済み）
-    // isSwitch の場合は JS 側の表示切替も PC扱いにする
-    const isMobile = !isSwitch && (window.innerWidth <= 768);
+    const isMobile = window.innerWidth <= 768;
     document.getElementById('player-info-pc').style.display    = isMobile ? 'none' : 'flex';
     document.getElementById('opponent-info-pc').style.display  = isMobile ? 'none' : 'flex';
     document.getElementById('smartphone-top-bar').style.display = isMobile ? 'flex' : 'none';
@@ -1562,120 +1442,6 @@ function init() {
     fetchLatestStream(); fetchUpcomingStream();
 }
 window.addEventListener('load', init);
-
-// Nintendo Switch 専用：Joy-Con Gamepad 操作
-
-if (isSwitch) {
-    const cursor = document.getElementById('switch-cursor');
-
-    // カーソル位置（画面座標）
-    let curX = window.innerWidth  / 2;
-    let curY = window.innerHeight / 2;
-
-    // スティック速度（px/frame）
-    const STICK_SPEED = 8;
-    // ボタンリピート間隔
-    const REPEAT_MS = 180;
-
-    // ゲームパッド入力状態
-    let gpPrevA      = false;
-    let gpPrevStart  = false;
-    let lastRepeat   = 0;
-
-    // カーソルをクランプして更新
-    function updateCursor(x, y) {
-        curX = Math.max(14, Math.min(window.innerWidth  - 14, x));
-        curY = Math.max(14, Math.min(window.innerHeight - 14, y));
-        cursor.style.left = curX + 'px';
-        cursor.style.top  = curY + 'px';
-    }
-    updateCursor(curX, curY);
-
-    // カーソル位置の要素にクリックイベントを発火
-    function fireTapAt(x, y) {
-        // カーソル下の要素を取得してクリック
-        cursor.style.display = 'none'; // 一時的に非表示にして elementFromPoint を正確に取得
-        const el = document.elementFromPoint(x, y);
-        cursor.style.display = 'block';
-        if (!el) return;
-        // touchstart → touchend → click の順に発火
-        const touchObj = new Touch({ identifier: Date.now(), target: el, clientX: x, clientY: y, radiusX: 1, radiusY: 1, rotationAngle: 0, force: 1 });
-        try {
-            el.dispatchEvent(new TouchEvent('touchstart', { touches: [touchObj], changedTouches: [touchObj], bubbles: true, cancelable: true }));
-            el.dispatchEvent(new TouchEvent('touchend',   { touches: [],         changedTouches: [touchObj], bubbles: true, cancelable: true }));
-        } catch(_) {}
-        el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: x, clientY: y }));
-    }
-
-    // canvas タップ（盤面操作）
-    function fireBoardTap(x, y) {
-        // canvas のクリックハンドラと同じ座標計算
-        const rect = canvas.getBoundingClientRect();
-        if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return;
-        canvas.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: x, clientY: y }));
-    }
-
-    // デッドゾーン
-    function deadzone(v, dz = 0.15) { return Math.abs(v) < dz ? 0 : v; }
-
-    // メインループ
-    function switchGamepadLoop(ts) {
-        requestAnimationFrame(switchGamepadLoop);
-
-        const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-        let gp = null;
-        for (const p of pads) { if (p) { gp = p; break; } }
-        if (!gp) return;
-
-        // ===== スティック / 十字キーでカーソル移動 =====
-        const axisX = deadzone(gp.axes[0] || 0) || deadzone(gp.axes[2] || 0);
-        const axisY = deadzone(gp.axes[1] || 0) || deadzone(gp.axes[3] || 0);
-        // 十字キー（buttons 12-15: up/down/left/right）
-        const dUp    = gp.buttons[12]?.pressed;
-        const dDown  = gp.buttons[13]?.pressed;
-        const dLeft  = gp.buttons[14]?.pressed;
-        const dRight = gp.buttons[15]?.pressed;
-
-        const dx = axisX + (dRight ? 1 : 0) - (dLeft  ? 1 : 0);
-        const dy = axisY + (dDown  ? 1 : 0) - (dUp    ? 1 : 0);
-
-        if (dx !== 0 || dy !== 0) {
-            updateCursor(curX + dx * STICK_SPEED, curY + dy * STICK_SPEED);
-        }
-
-        // ===== Aボタン（Nintendo配列 = index 0）でタップ =====
-        const aPressed = gp.buttons[0]?.pressed;
-        cursor.classList.toggle('pressing', aPressed);
-        if (aPressed && !gpPrevA) {
-            // カーソル位置にタップイベント発火
-            // canvas 上ならボード操作、それ以外は汎用クリック
-            const rect = canvas.getBoundingClientRect();
-            if (curX >= rect.left && curX <= rect.right && curY >= rect.top && curY <= rect.bottom) {
-                fireBoardTap(curX, curY);
-            } else {
-                fireTapAt(curX, curY);
-            }
-        }
-        gpPrevA = aPressed;
-
-        // ===== + ボタン（index 9）でオプション =====
-        const startPressed = gp.buttons[9]?.pressed;
-        if (startPressed && !gpPrevStart) {
-            const optBtn = document.getElementById('option-btn');
-            if (optBtn && document.getElementById('game-screen').style.display !== 'none') {
-                optBtn.click();
-            }
-        }
-        gpPrevStart = startPressed;
-    }
-
-    // Gamepad 接続時にループ開始
-    window.addEventListener('gamepadconnected', () => {
-        requestAnimationFrame(switchGamepadLoop);
-    });
-    // 既に接続済みの場合も即起動
-    requestAnimationFrame(switchGamepadLoop);
-}
 </script>
 </body>
 </html>
