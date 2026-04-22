@@ -652,7 +652,7 @@ let winBlackImg = new Image(), winWhiteImg = new Image(), winSpecialImg = new Im
 let reversePlayerSounds = [], reverseCpuSounds = [];
 let winResultSoundsArray = [], loseResultSoundsArray = [];
 let bgmAudio = null, titleBGM = null, yuetsuBGM = null, yuetsuUnlockBGM = null;
-let winSeAudio = null, winSAudio = null, clapAudio = null;
+let winSeAudio = null, winSAudios = [], clapAudio = null;
 let loseSeAudio = null, loseSakebiAudio = null, drumRoalAudio = null;
 let drawSeAudio = null, drawVoiceAudio = null, drawResultAudio = null;
 let voiceVolume = 0.9, bgmVolume = 0.2;
@@ -719,7 +719,8 @@ function initAudio() {
     yuetsuBGM       = mk('yuetu_bgm.mp3',   bgmVolume); yuetsuBGM.loop       = true;
     yuetsuUnlockBGM = mk('yuetu.mp3',       bgmVolume);
     winSeAudio      = mk('win_se.mp3',      voiceVolume);
-    winSAudio       = mk('win_s.mp3',       voiceVolume);
+    winSAudios      = [mk('win_s.mp3', voiceVolume)];
+    for (let i = 2; i <= 5; i++) winSAudios.push(mk(`win_s${i}.mp3`, voiceVolume));
     clapAudio       = mk('clap.mp3',        voiceVolume);
     loseSeAudio     = mk('lose_se.mp3',     voiceVolume);
     loseSakebiAudio = mk('lose_sakebi.mp3', voiceVolume);
@@ -1162,7 +1163,7 @@ function showResultScreen() {
         crown.className = 'winner-crown'; crown.textContent = '👑'; crown.style.left = '-36px'; crown.style.top = '4px';
         document.getElementById('player-count-area').appendChild(crown);
         if (soundEnabled && seEnabled) {
-            cpuStrength === '愉悦' ? playSound(winSAudio) : playSound(winResultSoundsArray[Math.floor(Math.random() * winResultSoundsArray.length)]);
+            cpuStrength === '愉悦' ? playSound(winSAudios[Math.floor(Math.random() * winSAudios.length)]) : playSound(winResultSoundsArray[Math.floor(Math.random() * winResultSoundsArray.length)]);
         }
     } else if (cf > pf) {
         titleEl.textContent = 'LOSE'; titleEl.style.color = '#ff4444';
@@ -1285,7 +1286,7 @@ function createColorSelect() {
 function applyVolumeToAll() {
     voiceVolume = parseFloat(document.getElementById('voice-volume-slider').value);
     bgmVolume   = parseFloat(document.getElementById('bgm-volume-slider').value);
-    [...reversePlayerSounds, ...reverseCpuSounds, winSeAudio, winSAudio, clapAudio, loseSeAudio, loseSakebiAudio, drumRoalAudio, drawSeAudio, drawVoiceAudio, ...winResultSoundsArray, ...loseResultSoundsArray, drawResultAudio]
+    [...reversePlayerSounds, ...reverseCpuSounds, winSeAudio, ...winSAudios, clapAudio, loseSeAudio, loseSakebiAudio, drumRoalAudio, drawSeAudio, drawVoiceAudio, ...winResultSoundsArray, ...loseResultSoundsArray, drawResultAudio]
         .forEach(a => { if (a) a.volume = voiceVolume; });
     [bgmAudio, titleBGM, yuetsuBGM, yuetsuUnlockBGM].forEach(a => { if (a) a.volume = bgmVolume; });
     if (_flipAudioElem) _flipAudioElem.volume = voiceVolume;
