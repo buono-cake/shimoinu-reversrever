@@ -883,17 +883,25 @@ const CORNER_CELLS = [[0,0],[0,7],[7,0],[7,7]];
 function isCorner(r, c) { return CORNER_CELLS.some(([cr,cc]) => cr===r && cc===c); }
 
 function getCutinSrc(placingColor) {
-    if (cpuStrength !== '愉悦') return null;
     const isMobile = window.innerWidth <= 768;
     const isPlayer = placingColor === playerColor;
-    if (isMobile) {
-        // SP: MP4（iOS Safari対応）
-        return isPlayer
-            ? (playerColor === 1 ? 'phone_black_cutin.mp4' : 'phone_white_cutin.mp4')
-            : 'phone_yuetu_cutin.mp4';
+
+    if (isPlayer) {
+        // 自分が角を取る：全難易度共通
+        if (isMobile) {
+            return playerColor === 1 ? 'phone_black_cutin.mp4' : 'phone_white_cutin.mp4';
+        } else {
+            return 'my_cutin.webm';
+        }
     } else {
-        // PC: WebM（VP9アルファ透過）
-        return isPlayer ? 'my_cutin.webm' : 'yuetu_cutin.webm';
+        // 相手が角を取る：難易度ごとに分岐
+        if (isMobile) {
+            const map = { 'よわい': 'phone_easy_cutin.mp4', 'ふつう': 'phone_normal_cutin.mp4', 'つよい': 'phone_hard_cutin.mp4', '愉悦': 'phone_yuetu_cutin.mp4' };
+            return map[cpuStrength] || null;
+        } else {
+            const map = { 'よわい': 'easy_cutin.webm', 'ふつう': 'normal_cutin.webm', 'つよい': 'hard_cutin.webm', '愉悦': 'yuetu_cutin.webm' };
+            return map[cpuStrength] || null;
+        }
     }
 }
 
@@ -938,20 +946,23 @@ async function placePiece(r, c, placingColor) {
     if (!flips.length) return;
     isFlipping = true;
 
-    // 角カットイン（愉悦モードのみ・動画終了後に駒配置）
+    // 角カットイン（全難易度・動画終了後に駒配置）
     if (isCorner(r, c)) {
         const cutinSrc = getCutinSrc(placingColor);
         if (cutinSrc) await playCutin(cutinSrc);
     }
 
+    // 使うボイスを1手につき1種類選んでおく
+    // 相手が10枚以上ひっくり返す場合はlose_sakebi.mp3を確定使用
+    const revList   = placingColor === playerColor ? reversePlayerSounds : reverseCpuSounds;
+    const chosenRev = (placingColor === cpuColor && flips.length >= 10 && loseSakebiAudio)
+        ? loseSakebiAudio
+        : revList[Math.floor(Math.random() * revList.length)];
+    const voiceSrc  = (chosenRev && soundEnabled && seEnabled) ? chosenRev.src : null;
+
     // 置いたコマを表示
     board[r][c] = placingColor; pieceVariant[r][c] = pickImg(placingColor);
     drawBoard();
-
-    // 使うボイスを1手につき1種類選んでおく
-    const revList   = placingColor === playerColor ? reversePlayerSounds : reverseCpuSounds;
-    const chosenRev = revList[Math.floor(Math.random() * revList.length)];
-    const voiceSrc  = (chosenRev && soundEnabled && seEnabled) ? chosenRev.src : null;
 
     // 最後のコマのボイスも最後まで流れてから次のターンへ進む
     for (let i = 0; i < flips.length; i++) {
