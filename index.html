@@ -112,7 +112,7 @@
             .strength-btn img { width: clamp(80px, 11vw, 120px) !important; height: clamp(80px, 11vw, 120px) !important; }
             .start-btn { margin: 8px 0 18px !important; }
             .strength-select { margin: 10px 0 !important; }
-            #winner-char-img { width: min(50vmin, 560px) !important; height: min(50vmin, 560px) !important; aspect-ratio: 1/1 !important; border-radius: 50% !important; }
+            #winner-char-img { width: min(50vmin, 560px) !important; height: auto !important; aspect-ratio: 1/1 !important; border-radius: 50% !important; }
             #se-toggle-btn, #bgm-toggle-option-btn { display: none !important; }
         }
 
@@ -195,7 +195,7 @@
             #option-btn { width: 44px !important; height: 44px !important; font-size: 1.4rem !important; top: 16px !important; left: 14px !important; }
             #result-screen { justify-content: center !important; align-items: center !important; padding: 12px 16px !important; overflow: hidden !important; }
             .result-title  { font-size: clamp(3rem, 14vw, 5rem) !important; margin-bottom: 8px !important; }
-            #winner-char-img { width: min(58vmin, 280px) !important; height: min(58vmin, 280px) !important; min-width: unset !important; min-height: unset !important; aspect-ratio: 1/1 !important; border-radius: 50% !important; margin: 8px auto !important; flex-shrink: 0 !important; }
+            #winner-char-img { width: min(58vmin, 280px) !important; height: auto !important; min-width: unset !important; min-height: unset !important; aspect-ratio: 1/1 !important; border-radius: 50% !important; margin: 8px auto !important; flex-shrink: 0 !important; }
             #result-score-area { font-size: 1.3rem !important; margin: 8px 0 !important; gap: 30px !important; }
             #result-title-btn, #result-end-btn { padding: 14px 36px !important; font-size: clamp(1.1rem, 4vw, 1.4rem) !important; margin: 6px 8px !important; }
             #result-snow { font-size: 36px !important; top: -18px !important; left: -16px !important; }
@@ -360,6 +360,32 @@
         @keyframes yuetsuZoomIn { 0% { transform: scale(0.08); opacity: 0; } 40% { opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
         #yuetsu-overlay.fadeout { opacity: 0; pointer-events: none; }
 
+        /* ===== カットイン動画オーバーレイ ===== */
+        #cutin-overlay {
+            position: fixed; inset: 0;
+            display: none;
+            align-items: center; justify-content: center;
+            background: transparent; /* PC: 透過 */
+            z-index: 999997;
+            pointer-events: none;
+        }
+        #cutin-video {
+            width: 100%; height: 100%;
+            object-fit: contain;
+            background: transparent;
+        }
+        /* SP: 全画面・背景あり */
+        @media (max-width: 768px) {
+            #cutin-overlay {
+                background: #000;
+            }
+            #cutin-video {
+                width: 100%; height: 100%;
+                object-fit: cover;
+                background: #000;
+            }
+        }
+
         /* ===== 結果発表タップ待ち画面 ===== */
         #score-tap-overlay {
             position: fixed; inset: 0;
@@ -492,7 +518,7 @@
     <!-- リザルト画面 -->
     <div id="result-screen" class="screen" style="display:none;" role="main">
         <div id="result-title" class="result-title">WIN</div>
-        <div class="char-img" id="winner-char-img" style="width:420px;height:420px;margin:30px auto;"></div>
+        <div class="char-img" id="winner-char-img" style="width:420px;height:auto;aspect-ratio:1/1;margin:30px auto;"></div>
         <div id="result-score-area">
             <div id="player-count-area" style="text-align:center;position:relative;">
                 <div style="font-size:1.15rem;margin-bottom:6px;">YOU</div>
@@ -509,6 +535,11 @@
 
     <!-- win/lose/draw オーバーレイ -->
     <div id="win-lose-overlay" aria-hidden="true"><img id="win-lose-image" alt="勝敗結果"></div>
+
+    <!-- カットイン動画オーバーレイ -->
+    <div id="cutin-overlay" aria-hidden="true">
+        <video id="cutin-video" playsinline></video>
+    </div>
 
     <!-- 愉悦アンロック演出 -->
     <div id="yuetsu-overlay" aria-hidden="true">
@@ -846,12 +877,71 @@ function drawBoard() {
     }
 }
 
+// ===== カットイン =====
+const CORNER_CELLS = [[0,0],[0,7],[7,0],[7,7]];
+function isCorner(r, c) { return CORNER_CELLS.some(([cr,cc]) => cr===r && cc===c); }
+
+function getCutinSrc(placingColor) {
+    if (cpuStrength !== '愉悦') return null;
+    const isMobile = window.innerWidth <= 768;
+    const isPlayer = placingColor === playerColor;
+    if (isMobile) {
+        // SP: MP4（iOS Safari対応）
+        return isPlayer
+            ? (playerColor === 1 ? 'phone_black_cutin.mp4' : 'phone_white_cutin.mp4')
+            : 'phone_yuetu_cutin.mp4';
+    } else {
+        // PC: WebM（VP9アルファ透過）
+        return isPlayer ? 'my_cutin.webm' : 'yuetu_cutin.webm';
+    }
+}
+
+function playCutin(src) {
+    return new Promise(resolve => {
+        const overlay = document.getElementById('cutin-overlay');
+        const video   = document.getElementById('cutin-video');
+        overlay.style.display = 'flex';
+        overlay.removeAttribute('aria-hidden');
+        video.src = src;
+        video.currentTime = 0;
+        video.volume = voiceVolume; // SE音量参照
+
+        let finished = false;
+        const finish = () => {
+            if (finished) return;
+            finished = true;
+            overlay.style.display = 'none';
+            overlay.setAttribute('aria-hidden', 'true');
+            video.pause();
+            video.src = '';
+            // iOSでvideoがAudioSessionを奪うためBGMを再開する
+            if (soundEnabled && bgmEnabled) {
+                const activeBGM = cpuStrength === '愉悦' ? yuetsuBGM : bgmAudio;
+                if (activeBGM && activeBGM.paused) {
+                    activeBGM.play().catch(() => {});
+                }
+            }
+            resolve();
+        };
+        const timer = setTimeout(finish, 15000); // 最大15秒フォールバック
+        video.onended   = () => { clearTimeout(timer); finish(); };
+        video.onerror   = () => { clearTimeout(timer); finish(); };
+        video.play().catch(() => { clearTimeout(timer); finish(); });
+    });
+}
+
 // ===== コマ配置 =====
 async function placePiece(r, c, placingColor) {
     if (gameOver || isFlipping) return;
     const flips = getFlips(r, c, placingColor);
     if (!flips.length) return;
     isFlipping = true;
+
+    // 角カットイン（愉悦モードのみ・動画終了後に駒配置）
+    if (isCorner(r, c)) {
+        const cutinSrc = getCutinSrc(placingColor);
+        if (cutinSrc) await playCutin(cutinSrc);
+    }
 
     // 置いたコマを表示
     board[r][c] = placingColor; pieceVariant[r][c] = pickImg(placingColor);
@@ -1199,6 +1289,8 @@ function applyVolumeToAll() {
         .forEach(a => { if (a) a.volume = voiceVolume; });
     [bgmAudio, titleBGM, yuetsuBGM, yuetsuUnlockBGM].forEach(a => { if (a) a.volume = bgmVolume; });
     if (_flipAudioElem) _flipAudioElem.volume = voiceVolume;
+    const _cv = document.getElementById('cutin-video');
+    if (_cv) _cv.volume = voiceVolume;
 }
 function setupSlider(slider) {
     let dragging = false;
